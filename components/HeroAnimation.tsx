@@ -1,7 +1,7 @@
 import { useRef, useMemo, useEffect, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 
 interface Product {
   name: string
@@ -81,58 +81,6 @@ function generateScatterPositions(pointCount: number, spread: number = 2.5): Flo
   return new Float32Array(positions)
 }
 
-// Extract model positions
-function extractModelPositions(scene: THREE.Object3D, pointCount: number): Float32Array {
-  const allVerts: THREE.Vector3[] = []
-  
-  scene.updateMatrixWorld(true)
-  
-  scene.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.geometry) {
-      const pos = child.geometry.attributes.position
-      const matrix = child.matrixWorld
-      
-      for (let i = 0; i < pos.count; i++) {
-        const vec = new THREE.Vector3()
-        vec.fromBufferAttribute(pos, i)
-        vec.applyMatrix4(matrix)
-        allVerts.push(vec.clone())
-      }
-    }
-  })
-  
-  const positions: number[] = []
-  
-  if (allVerts.length === 0) {
-    // Fallback: generate a cube if no verts found
-    for (let i = 0; i < pointCount; i++) {
-      positions.push(
-        (Math.random() - 0.5) * 1,
-        (Math.random() - 0.5) * 1,
-        (Math.random() - 0.5) * 1
-      )
-    }
-  } else if (allVerts.length >= pointCount) {
-    const stride = Math.floor(allVerts.length / pointCount)
-    for (let i = 0; i < pointCount; i++) {
-      const v = allVerts[Math.min(i * stride, allVerts.length - 1)]
-      positions.push(v.x, v.y, v.z)
-    }
-  } else {
-    for (let i = 0; i < pointCount; i++) {
-      const v = allVerts[i % allVerts.length]
-      const offset = i >= allVerts.length ? 0.002 : 0
-      positions.push(
-        v.x + (Math.random() - 0.5) * offset,
-        v.y + (Math.random() - 0.5) * offset,
-        v.z + (Math.random() - 0.5) * offset
-      )
-    }
-  }
-  
-  return new Float32Array(positions)
-}
-
 // Easing function for smoother animation
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -147,43 +95,33 @@ export function HeroAnimation({
   const pointsRef = useRef<THREE.Points>(null)
   const materialRef = useRef<THREE.PointsMaterial>(null)
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
-  const [phase, setPhase] = useState<'barcode' | 'scatter' | 'forming' | 'product' | 'hold'>('barcode')
+  const [phase, setPhase] = useState<'chaos' | 'coalescing' | 'barcode' | 'transforming' | 'product'>('chaos')
   const phaseStartTime = useRef(0)
   const { clock } = useThree()
-  
-  // Load all product models
-  const productScenes = products.map(p => {
-    try {
-      const { scene } = useGLTF(p.modelPath)
-      return scene
-    } catch {
-      return null
-    }
-  })
   
   // Generate all position sets
   const positionSets = useMemo(() => {
     const barcode = generateBarcodePositions(pointCount)
     const scatter = generateScatterPositions(pointCount)
-    const productPositions = productScenes.map(scene => 
-      scene ? extractModelPositions(scene, pointCount) : scatter
-    )
+    // Use geometric chocolate bar for all products
+    const chocolateBar = generateChocolateBarPositions(pointCount)
+    const productPositions = products.map(() => chocolateBar)
     
     return { barcode, scatter, products: productPositions }
-  }, [pointCount, productScenes])
+  }, [pointCount, products])
   
-  // Timeline configuration (in seconds)
+  // Timeline configuration (in seconds) - Three Act Structure
   const timeline = {
-    barcode: 1.5,      // Show barcode
-    scatter: 1.0,      // Dissolve to scatter
-    forming: 1.2,      // Form into product
-    product: 0.8,      // Show product (with rotation)
-    hold: 2.0          // Hold before next cycle
+    chaos: 3.0,          // ACT 1: Particle storm (0-3s)
+    coalescing: 2.0,     // Particles gravitate and pull together (3-5s)
+    barcode: 2.0,        // ACT 2: Barcode formation complete (5-7s)
+    transforming: 2.0,   // Barcode transforms to product (7-9s)
+    product: 3.0         // ACT 3: Product reveal with text (9-12s)
   }
   
-  // Initialize positions
+  // Initialize positions - Start with CHAOS
   const currentPositions = useMemo(() => {
-    return positionSets.barcode.slice()
+    return positionSets.scatter.slice()
   }, [positionSets])
   
   // Phase management
@@ -198,64 +136,72 @@ export function HeroAnimation({
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
-    // Determine target and progress based on phase
+    // THREE ACT STRUCTURE: Chaos → Clarity → Revelation
     let target: Float32Array
     let progress = 0
     let shouldRotate = false
     
     switch (phase) {
-      case 'barcode':
-        target = positionSets.barcode
-        progress = Math.min(elapsed / 0.5, 1)
-        if (elapsed > timeline.barcode) {
-          setPhase('scatter')
-          onPhaseChange?.('scatter', currentProductIndex)
-        }
-        break
-        
-      case 'scatter':
+      case 'chaos':
+        // ACT 1: Particle storm - gentle drift
         target = positionSets.scatter
-        progress = easeInOutCubic(Math.min(elapsed / timeline.scatter, 1))
-        if (elapsed > timeline.scatter) {
-          setPhase('forming')
-          onPhaseChange?.('forming', currentProductIndex)
+        progress = Math.min(elapsed / 1.0, 1)
+        // Add subtle drift animation
+        if (pointsRef.current) {
+          pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.1) * 0.05
+        }
+        if (elapsed > timeline.chaos) {
+          setPhase('coalescing')
+          onPhaseChange?.('coalescing', currentProductIndex)
         }
         break
         
-      case 'forming':
+      case 'coalescing':
+        // Particles gravitate toward barcode formation - accelerating
+        target = positionSets.barcode
+        // Use power easing for acceleration effect
+        const t = Math.min(elapsed / timeline.coalescing, 1)
+        progress = t * t * t // Cubic easing for acceleration
+        if (elapsed > timeline.coalescing) {
+          setPhase('barcode')
+          onPhaseChange?.('barcode', currentProductIndex)
+        }
+        break
+        
+      case 'barcode':
+        // ACT 2: Clean barcode - breathing room
+        target = positionSets.barcode
+        progress = 1
+        if (elapsed > timeline.barcode) {
+          setPhase('transforming')
+          onPhaseChange?.('transforming', currentProductIndex)
+        }
+        break
+        
+      case 'transforming':
+        // Barcode explodes/morphs into product
         target = positionSets.products[currentProductIndex]
-        progress = easeInOutCubic(Math.min(elapsed / timeline.forming, 1))
-        if (elapsed > timeline.forming) {
+        progress = easeInOutCubic(Math.min(elapsed / timeline.transforming, 1))
+        if (elapsed > timeline.transforming) {
           setPhase('product')
           onPhaseChange?.('product', currentProductIndex)
         }
         break
         
       case 'product':
+        // ACT 3: Product reveal with gentle rotation
         target = positionSets.products[currentProductIndex]
         progress = 1
         shouldRotate = true
         if (elapsed > timeline.product) {
-          setPhase('hold')
-          onPhaseChange?.('hold', currentProductIndex)
-        }
-        break
-        
-      case 'hold':
-        target = positionSets.products[currentProductIndex]
-        progress = 1
-        shouldRotate = true
-        if (elapsed > timeline.hold) {
-          // Move to next product
-          const nextIndex = (currentProductIndex + 1) % products.length
-          setCurrentProductIndex(nextIndex)
-          setPhase('scatter')
-          onPhaseChange?.('scatter', nextIndex)
+          // Loop back to chaos
+          setPhase('chaos')
+          onPhaseChange?.('chaos', currentProductIndex)
         }
         break
         
       default:
-        target = positionSets.barcode
+        target = positionSets.scatter
         progress = 1
     }
     
@@ -299,7 +245,7 @@ export function HeroAnimation({
       <pointsMaterial
         ref={materialRef}
         size={pointSize}
-        color="#ffffff"
+        color="#F8F8F7"
         sizeAttenuation
         transparent
         opacity={0.92}
@@ -310,8 +256,4 @@ export function HeroAnimation({
   )
 }
 
-// Preload models
-export function preloadProducts(products: Product[]) {
-  products.forEach(p => useGLTF.preload(p.modelPath))
-}
 

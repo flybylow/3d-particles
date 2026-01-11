@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { HeroAnimation, preloadProducts } from './HeroAnimation'
+import { HeroAnimation } from './HeroAnimation'
 import './HomepageHero.css'
 
 interface Product {
@@ -11,69 +11,50 @@ interface Product {
   category: string
 }
 
+// Focus on single chocolate bar for hero moment
 const PRODUCTS: Product[] = [
   {
-    name: 'Chocolate',
+    name: 'Chocolate Bar',
     modelPath: '/models/chocolate-bar.glb',
     category: 'Food & Beverage'
-  },
-  {
-    name: 'Battery',
-    modelPath: '/models/battery.glb',
-    category: 'Electronics'
-  },
-  {
-    name: 'Garment',
-    modelPath: '/models/garment.glb',
-    category: 'Textiles'
   }
 ]
 
-// Preload
-preloadProducts(PRODUCTS)
-
+// Three Act Narrative Structure
 const PHASES = {
+  chaos: {
+    headline: 'Your supply chain is noise.',
+    subline: ''
+  },
+  coalescing: {
+    headline: 'Your supply chain is noise.',
+    subline: ''
+  },
   barcode: {
-    headline: '',
+    headline: 'One scan.',
     subline: ''
   },
-  scatter: {
-    headline: '',
-    subline: ''
-  },
-  forming: {
-    headline: '',
+  transforming: {
+    headline: 'One scan.',
     subline: ''
   },
   product: {
-    headline: 'Know your product.',
-    subline: ''
-  },
-  hold: {
     headline: 'Know your product.',
     subline: ''
   }
 }
 
 export function HomepageHero() {
-  const [phase, setPhase] = useState('barcode')
+  const [phase, setPhase] = useState('chaos')
   const [currentProduct, setCurrentProduct] = useState(PRODUCTS[0])
-  const [showText, setShowText] = useState(false)
-  const [cycleCount, setCycleCount] = useState(0)
+  const [showText, setShowText] = useState(true) // Start with text visible
   
   const handlePhaseChange = (newPhase: string, productIndex: number) => {
     setPhase(newPhase)
     setCurrentProduct(PRODUCTS[productIndex])
     
-    // Show text when product is formed
-    if (newPhase === 'product') {
-      setShowText(true)
-    } else if (newPhase === 'scatter') {
-      setShowText(false)
-      if (productIndex === 0) {
-        setCycleCount(c => c + 1)
-      }
-    }
+    // Text is always visible, content changes based on phase
+    setShowText(true)
   }
   
   return (
@@ -85,7 +66,7 @@ export function HomepageHero() {
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           dpr={[1, 2]}
         >
-          <color attach="background" args={['#08080c']} />
+          <color attach="background" args={['#1A1A1A']} />
           
           <Suspense fallback={null}>
             <HeroAnimation
@@ -98,19 +79,19 @@ export function HomepageHero() {
         </Canvas>
       </div>
       
-      {/* Text Overlay */}
+      {/* Text Overlay - Three Act Narrative */}
       <div className={`hero-text ${showText ? 'visible' : ''}`}>
-        <h1>Know your product.</h1>
+        <h1>{PHASES[phase as keyof typeof PHASES]?.headline || 'Know your product.'}</h1>
       </div>
       
-      {/* Product Label */}
-      <div className={`product-label ${phase === 'product' || phase === 'hold' ? 'visible' : ''}`}>
+      {/* Product Label - Only show in product phase */}
+      <div className={`product-label ${phase === 'product' ? 'visible' : ''}`}>
         <span className="product-category">{currentProduct.category}</span>
         <span className="product-name">{currentProduct.name}</span>
       </div>
       
-      {/* Bottom tagline - appears after first full cycle */}
-      <div className={`hero-tagline ${cycleCount > 0 ? 'visible' : ''}`}>
+      {/* Bottom tagline */}
+      <div className={`hero-tagline ${phase === 'product' ? 'visible' : ''}`}>
         <p>Digital Product Passports for the EU economy</p>
       </div>
       
