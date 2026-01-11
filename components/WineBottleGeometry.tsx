@@ -13,14 +13,14 @@ export function useWineBottlePositions(pointCount: number, scale: number = 0.08)
   return useMemo(() => {
     const positions = extractModelPositions(scene, pointCount)
     
-    // Rotate -90 degrees (rotate left around Y axis) and tilt upright
-    const flipAngle = -Math.PI / 2 // -90 degrees
-    const tiltAngle = Math.PI * 0.4 // 72 degrees - more upright
+    // Rotate to make bottle stand upright vertically with cork on top
+    const standUpAngle = -Math.PI / 2 // -90 degrees to stand up (cork up)
+    const spinAngle = -Math.PI / 2 // -90 degrees to face forward
     
-    const cosY = Math.cos(flipAngle)
-    const sinY = Math.sin(flipAngle)
-    const cosX = Math.cos(tiltAngle)
-    const sinX = Math.sin(tiltAngle)
+    const cosX = Math.cos(standUpAngle)
+    const sinX = Math.sin(standUpAngle)
+    const cosY = Math.cos(spinAngle)
+    const sinY = Math.sin(spinAngle)
     
     // Scale and rotate each vertex
     for (let i = 0; i < positions.length; i += 3) {
@@ -29,16 +29,16 @@ export function useWineBottlePositions(pointCount: number, scale: number = 0.08)
       let y = positions[i + 1] * scale
       let z = positions[i + 2] * scale
       
-      // First flip 180 degrees around Y axis
-      const x1 = x * cosY + z * sinY
-      const z1 = -x * sinY + z * cosY
+      // First: Rotate 90° around X axis to stand the bottle upright
+      const y1 = y * cosX - z * sinX
+      const z1 = y * sinX + z * cosX
       
-      // Then tilt forward around X axis
-      const y2 = y * cosX - z1 * sinX
-      const z2 = y * sinX + z1 * cosX
+      // Second: Rotate around Y axis to face forward
+      const x2 = x * cosY + z1 * sinY
+      const z2 = -x * sinY + z1 * cosY
       
-      positions[i] = x1
-      positions[i + 1] = y2
+      positions[i] = x2
+      positions[i + 1] = y1
       positions[i + 2] = z2
     }
     
