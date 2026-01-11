@@ -5,10 +5,6 @@ import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
 import { useTShirtPositions } from './TShirtGeometry'
-import {
-  scanLightVertexShader,
-  scanLightFragmentShader,
-} from './ScanLightShader'
 
 interface Product {
   name: string
@@ -21,64 +17,6 @@ interface HeroAnimationProps {
   pointCount?: number
   pointSize?: number
   onPhaseChange?: (phase: string, productIndex: number) => void
-}
-
-// Generate barcode positions
-function generateBarcodePositions(pointCount: number): Float32Array {
-  const positions: number[] = []
-  const width = 1.3  // Reduced from 1.8 to better fit screen width
-  const height = 0.9
-  const barCount = 40
-  
-  // First pass: calculate total width needed
-  const barWidths: number[] = []
-  let totalWidth = 0
-  for (let i = 0; i < barCount; i++) {
-    const isBar = i % 2 === 0
-    const barWidth = isBar 
-      ? (0.015 + Math.random() * 0.025)
-      : (0.008 + Math.random() * 0.015)
-    barWidths.push(barWidth)
-    totalWidth += barWidth
-  }
-  
-  // Normalize widths to fit exactly within desired width
-  const scale = width / totalWidth
-  const bars: { x: number; w: number }[] = []
-  let x = -width / 2
-  
-  for (let i = 0; i < barCount; i++) {
-    const isBar = i % 2 === 0
-    const barWidth = barWidths[i] * scale
-    
-    if (isBar) {
-      bars.push({ x: x + barWidth / 2, w: barWidth })
-    }
-    x += barWidth
-  }
-  
-  const pointsPerBar = Math.floor(pointCount / bars.length)
-  
-  bars.forEach(bar => {
-    for (let i = 0; i < pointsPerBar; i++) {
-      positions.push(
-        bar.x + (Math.random() - 0.5) * bar.w * 0.9,
-        (Math.random() - 0.5) * height,
-        (Math.random() - 0.5) * 0.02
-      )
-    }
-  })
-  
-  while (positions.length < pointCount * 3) {
-    const randomBar = bars[Math.floor(Math.random() * bars.length)]
-    positions.push(
-      randomBar.x + (Math.random() - 0.5) * randomBar.w * 0.9,
-      (Math.random() - 0.5) * height,
-      0
-    )
-  }
-  
-  return new Float32Array(positions.slice(0, pointCount * 3))
 }
 
 // Generate scattered positions
@@ -113,28 +51,12 @@ export function HeroAnimation({
 }: HeroAnimationProps) {
   const pointsRef = useRef<THREE.Points>(null)
   const materialRef = useRef<THREE.PointsMaterial>(null)
-  const scanLightRef = useRef<THREE.Mesh>(null)
-  const scanGlowRef = useRef<THREE.Mesh>(null)
-  const scanShaderRef = useRef<THREE.ShaderMaterial>(null)
-  const lightningFlashRef = useRef<THREE.Mesh>(null) // Flash overlay for lightning effect
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
-  const [phase, setPhase] = useState<'chaos' | 'failedScan' | 'scanning' | 'barcode' | 'holding' | 'transforming' | 'product'>('chaos')
+  const [phase, setPhase] = useState<'intro' | 'cycling'>('intro')
   const phaseStartTime = useRef(0)
+  const productStartTime = useRef(0) // Track when current product started
   const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
-  const failedScanCount = useRef(0) // Track failed scan attempts
   const { clock } = useThree()
-  
-  // Shader uniforms for elegant scan light
-  const scanUniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uIntensity: { value: 0.8 },  // Less intense overall
-      uColorCore: { value: new THREE.Color(0xFFFFFF) },  // Bright white core
-      uColorEdge: { value: new THREE.Color(0x4CC9F0) },  // Blue-cyan edges (subtle)
-      uWidth: { value: 0.3 },
-    }),
-    []
-  )
   
   // Load all product models
   const wineBottle = useWineBottlePositions(pointCount)
@@ -143,7 +65,6 @@ export function HeroAnimation({
   
   // Generate all position sets
   const positionSets = useMemo(() => {
-    const barcode = generateBarcodePositions(pointCount)
     const scatter = generateScatterPositions(pointCount)
     // Map products: wine bottle first, then battery, then t-shirt
     const productPositions = products.map((product, index) => {
@@ -153,19 +74,15 @@ export function HeroAnimation({
       return wineBottle // fallback
     })
     
-    return { barcode, scatter, products: productPositions }
+    return { scatter, products: productPositions }
   }, [pointCount, products, wineBottle, battery, tshirt])
   
-  // Timeline configuration (in seconds) - NEW SPEC: Electric Awakening
-  // Copy Rhythm: "Scan." → "Any product." → "Verify." → "Trusted."
+  // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
+  // Flow: Chaos background → "Scan any product" → Rapid product cycling
   const timeline = {
-    chaos: 2.0,          // 0-2s: "Scan." - Command with chaos
-    failedScan: 2.0,     // 2-4s: "Any product." - Scope, failed scanning
-    scanning: 4.0,       // 4-8s: THE AWAKENING - Lightning strikes, chain reaction, barcode forms
-    barcode: 0.0,        // Merged into scanning phase
-    holding: 1.5,        // 8-9.5s: "Verify." - Process confirmed ⚠️ CRITICAL
-    transforming: 2.0,   // 9.5-11.5s: Product transformation
-    product: 1.5         // 11.5-13s: "Trusted." - Outcome, resolution
+    intro: 2.5,              // 0-2.5s: Intro with chaos, text appears
+    productDuration: 1.5,    // Time to show each product (transform + display)
+    transformDuration: 0.8   // Time to morph to product
   }
   
   // Color states for emotional journey
@@ -193,177 +110,73 @@ export function HeroAnimation({
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
-    // PERSUASION SEQUENCE: Anxiety → Relief → Delight
+    // NEW FLOW: Chaos background → Rapid product cycling
     let target: Float32Array
     let progress = 0
     let shouldRotate = false
     let particleColor = colors.offWhite
-    let scanLightPosition = -3 // Off-screen left
-    let scanLightVisible = false
-    let lightningFlashOpacity = 0 // Flash overlay opacity
+    let chaosOpacity = 0.4 // Background chaos particles
+    let productOpacity = 0 // Center product particles
     
     switch (phase) {
-      case 'chaos':
-        // ACT 1: Chaos - warm error colors, jittery movement
-        target = positionSets.scatter
-        progress = Math.min(elapsed / 1.0, 1)
-        particleColor = colors.chaosWarm
-        // Jittery rotation to suggest system failure
-        if (pointsRef.current) {
-          pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 2) * 0.08
-        }
-        if (elapsed > timeline.chaos) {
-          failedScanCount.current = 0
-          setPhase('failedScan')
-          onPhaseChange?.('failedScan', currentProductIndex)
-        }
-        break
-        
-      case 'failedScan':
-        // Failed scanning attempts (2-3 times)
+      case 'intro':
+        // Intro: Chaos background with gentle movement
         target = positionSets.scatter
         progress = 1
         particleColor = colors.chaosWarm
-        scanLightVisible = true
-        // Scan line passes but doesn't align particles
-        const scanProgress = (elapsed % timeline.failedScan) / timeline.failedScan
-        scanLightPosition = -2 + (scanProgress * 4) // Sweep across
+        chaosOpacity = 0.3
         
-        if (elapsed > timeline.failedScan) {
-          failedScanCount.current++
-          if (failedScanCount.current >= 2) {
-            // After 2 failed scans, move to successful scan
-            setPhase('scanning')
-            onPhaseChange?.('scanning', currentProductIndex)
-          } else {
-            // Reset for another failed scan attempt
-            phaseStartTime.current = clock.elapsedTime
-          }
-        }
-        break
-        
-      case 'scanning':
-        // ACT 2: THE AWAKENING - Electric lightning strike & particle ignition
-        target = positionSets.barcode
-        const awakeningT = Math.min(elapsed / timeline.scanning, 1)
-        
-        // PHASE 1: Lightning Strike (0-1s) - Instant flash
-        if (elapsed < 1.0) {
-          const flashT = elapsed / 1.0
-          // Bright electric blue-white flash
-          particleColor = new THREE.Color(0xFFFFFF) // Pure white flash
-          scanLightVisible = true
-          scanLightPosition = Math.sin(flashT * Math.PI * 4) * 2 // Zigzag lightning path
-          progress = flashT * 0.3 // Particles start reacting
-          
-          // Screen flash - bright at start, fades quickly
-          lightningFlashOpacity = Math.max(0, 0.6 - (flashT * 0.6)) * Math.sin(flashT * 15)
-          
-          // Pulsing size for energy burst
-          if (materialRef.current) {
-            materialRef.current.size = pointSize * (1 + Math.sin(flashT * 20) * 0.5)
-          }
-        }
-        // PHASE 2: Chain Reaction (1-2.5s) - Energy spreads
-        else if (elapsed < 2.5) {
-          const chainT = (elapsed - 1.0) / 1.5
-          // Electric blue color
-          particleColor = new THREE.Color(0x4CC9F0)
-          progress = 0.3 + (chainT * 0.4) // Particles moving toward barcode
-          scanLightVisible = false
-          lightningFlashOpacity = 0
-          
-          // Rapid pulsing as energy spreads
-          if (materialRef.current) {
-            materialRef.current.size = pointSize * (1 + Math.sin(chainT * 30) * 0.3)
-          }
-        }
-        // PHASE 3: Formation (2.5-4s) - Barcode locks in
-        else {
-          const formT = (elapsed - 2.5) / 1.5
-          particleColor = new THREE.Color().lerpColors(
-            new THREE.Color(0x4CC9F0),
-            colors.verifiedCool,
-            formT
-          )
-          progress = 0.7 + (formT * 0.3) // Final alignment
-          scanLightVisible = false
-          lightningFlashOpacity = 0
-          
-          // Size stabilizes
-          if (materialRef.current) {
-            materialRef.current.size = pointSize * (1 + (1 - formT) * 0.2)
-          }
-        }
-        
-        if (elapsed > timeline.scanning) {
-          setPhase('barcode')
-          onPhaseChange?.('barcode', currentProductIndex)
-        }
-        break
-        
-      case 'barcode':
-        // Barcode formed, brief hold before verification moment
-        target = positionSets.barcode
-        progress = 1
-        particleColor = colors.scanLight
-        // Reset particle size to normal
-        if (materialRef.current) {
-          materialRef.current.size = pointSize
-        }
-        if (elapsed > timeline.barcode) {
-          setPhase('holding')
-          onPhaseChange?.('holding', currentProductIndex)
-        }
-        break
-        
-      case 'holding':
-        // ⚠️ CRITICAL: Hold + verify moment - "One scan." appears
-        target = positionSets.barcode
-        progress = 1
-        particleColor = colors.verifiedCool
-        // Subtle pulse for verification
-        const pulseT = (elapsed / 2.0) * Math.PI * 2
-        const pulseScale = 1.0 + (Math.sin(pulseT) * 0.02)
+        // Gentle floating movement
         if (pointsRef.current) {
-          pointsRef.current.scale.setScalar(pulseScale)
+          pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.05
         }
-        if (elapsed > timeline.holding) {
-          if (pointsRef.current) pointsRef.current.scale.setScalar(1.0)
-          setPhase('transforming')
-          onPhaseChange?.('transforming', currentProductIndex)
+        
+        if (elapsed > timeline.intro) {
+          setPhase('cycling')
+          productStartTime.current = clock.elapsedTime
+          setCurrentProductIndex(0)
+          onPhaseChange?.('cycling', 0)
         }
         break
         
-      case 'transforming':
-        // Product transformation - barcode → product
-        target = positionSets.products[currentProductIndex]
-        progress = easeInOutCubic(Math.min(elapsed / timeline.transforming, 1))
-        particleColor = colors.verifiedCool
-        if (elapsed > timeline.transforming) {
-          setPhase('product')
-          onPhaseChange?.('product', currentProductIndex)
-        }
-        break
+      case 'cycling':
+        // Rapid product cycling: Check, check, check!
+        const productElapsed = clock.elapsedTime - productStartTime.current
         
-      case 'product':
-        // ACT 3: Verified state - cool colors, stable
-        target = positionSets.products[currentProductIndex]
-        progress = 1
-        shouldRotate = true
-        particleColor = colors.offWhite
-        if (elapsed > timeline.product) {
-          // Cycle to next product or loop
+        // Check if it's time to switch to next product
+        if (productElapsed > timeline.productDuration) {
           const nextProductIndex = (currentProductIndex + 1) % products.length
-          if (nextProductIndex !== 0) {
-            setCurrentProductIndex(nextProductIndex)
-            setPhase('transforming')
-            onPhaseChange?.('transforming', nextProductIndex)
-          } else {
-            setCurrentProductIndex(0)
-            setPhase('chaos')
-            onPhaseChange?.('chaos', 0)
-          }
+          setCurrentProductIndex(nextProductIndex)
+          productStartTime.current = clock.elapsedTime
+          onPhaseChange?.('cycling', nextProductIndex)
+        }
+        
+        // Animation: Transform in → Display → Transform out
+        const localElapsed = productElapsed
+        const transformIn = timeline.transformDuration
+        const displayTime = timeline.productDuration - transformIn
+        
+        if (localElapsed < transformIn) {
+          // Morphing from chaos to product
+          const morphT = easeInOutCubic(localElapsed / transformIn)
+          target = positionSets.products[currentProductIndex]
+          progress = morphT
+          particleColor = new THREE.Color().lerpColors(
+            colors.chaosWarm,
+            colors.offWhite,
+            morphT
+          )
+          chaosOpacity = 0.3 * (1 - morphT * 0.5) // Fade chaos slightly
+          productOpacity = morphT
+          shouldRotate = true
+        } else {
+          // Displaying product
+          target = positionSets.products[currentProductIndex]
+          progress = 1
+          particleColor = colors.offWhite
+          chaosOpacity = 0.2 // Subtle background chaos
+          productOpacity = 1
+          shouldRotate = true
         }
         break
         
@@ -375,38 +188,8 @@ export function HeroAnimation({
     // Update particle color
     if (materialRef.current) {
       materialRef.current.color.lerp(particleColor, delta * 3)
-    }
-    
-    // Update shader time uniform for animation
-    if (scanShaderRef.current) {
-      scanShaderRef.current.uniforms.uTime.value = state.clock.elapsedTime
-    }
-    
-    // Update scan light position and visibility with elegant movement
-    if (scanLightRef.current && scanGlowRef.current) {
-      scanLightRef.current.visible = scanLightVisible
-      scanGlowRef.current.visible = scanLightVisible
-      scanLightRef.current.position.x = scanLightPosition
-      scanGlowRef.current.position.x = scanLightPosition
-      
-      // Vary intensity during failed scans vs successful scan
-      if (scanShaderRef.current) {
-        if (phase === 'failedScan') {
-          // Weaker, flickering during failed scans
-          const flicker = 0.4 + Math.random() * 0.2
-          scanShaderRef.current.uniforms.uIntensity.value = flicker
-        } else if (phase === 'scanning') {
-          // Bright but not overwhelming during successful scan
-          scanShaderRef.current.uniforms.uIntensity.value = 0.85
-        }
-      }
-    }
-    
-    // Update lightning flash overlay
-    if (lightningFlashRef.current) {
-      const flashMaterial = lightningFlashRef.current.material as THREE.MeshBasicMaterial
-      flashMaterial.opacity = lightningFlashOpacity
-      lightningFlashRef.current.visible = lightningFlashOpacity > 0
+      // Update opacity based on phase
+      materialRef.current.opacity = phase === 'intro' ? chaosOpacity : 0.92
     }
     
     // Interpolate positions with staggered timing
@@ -423,7 +206,7 @@ export function HeroAnimation({
         let targetValue = target[idx]
         
         // Apply vertical offset for product phases (Y coordinate)
-        if (j === 1 && (phase === 'transforming' || phase === 'product')) {
+        if (j === 1 && phase === 'cycling') {
           targetValue += productYOffset
         }
         
@@ -437,10 +220,10 @@ export function HeroAnimation({
     
     pointsRef.current.geometry.attributes.position.needsUpdate = true
     
-    // Rotation during product phase - rotate around bottle's center vertical axis
-    if (shouldRotate && phase === 'product') {
+    // Rotation during product cycling - rotate around product's center vertical axis
+    if (shouldRotate && phase === 'cycling') {
       // Increment rotation angle
-      rotationAngle.current += delta * 0.3
+      rotationAngle.current += delta * 0.5 // Faster rotation for dynamic feel
       
       const cos = Math.cos(rotationAngle.current)
       const sin = Math.sin(rotationAngle.current)
@@ -487,46 +270,6 @@ export function HeroAnimation({
           blending={THREE.AdditiveBlending}
         />
       </points>
-      
-      {/* Scan light - THE HERO MOMENT - Elegant shader-based */}
-      <mesh ref={scanLightRef} visible={false} position={[0, 0, 0.2]}>
-        <planeGeometry args={[0.25, 2.8]} />
-        <shaderMaterial
-          ref={scanShaderRef}
-          vertexShader={scanLightVertexShader}
-          fragmentShader={scanLightFragmentShader}
-          uniforms={scanUniforms}
-          transparent
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      
-      {/* Scan glow halo - extremely subtle, almost invisible */}
-      <mesh ref={scanGlowRef} visible={false} position={[0, 0, 0.1]}>
-        <planeGeometry args={[0.3, 3.0]} />
-        <meshBasicMaterial
-          color="#4CC9F0"
-          transparent
-          opacity={0.02}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          side={THREE.DoubleSide}
-        />
-      </mesh>
-      
-      {/* Lightning Flash Overlay - Full-screen flash during awakening */}
-      <mesh ref={lightningFlashRef} visible={false} position={[0, 0, 2]}>
-        <planeGeometry args={[10, 10]} />
-        <meshBasicMaterial
-          color="#FFFFFF"
-          transparent
-          opacity={0}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-        />
-      </mesh>
     </>
   )
 }
