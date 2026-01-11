@@ -43,7 +43,7 @@ function generateScatterPositions(pointCount: number, spread: number = 2.5): Flo
   return new Float32Array(positions)
 }
 
-// Generate barcode positions (vertical bars)
+// Generate barcode positions (vertical bars) - DETERMINISTIC pattern
 function generateBarcodePositions(pointCount: number): Float32Array {
   const positions: number[] = []
   
@@ -53,28 +53,32 @@ function generateBarcodePositions(pointCount: number): Float32Array {
   const barCount = 40 // Number of vertical bars
   const barWidth = width / barCount
   
-  // Generate bar widths (varying thickness like real barcode)
+  // DETERMINISTIC bar pattern (same every time) - alternating widths like real barcode
   const barWidths: number[] = []
+  const pattern = [1, 2, 1, 1, 3, 2, 1, 4, 2, 1, 1, 3, 1, 2, 1, 4, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 4, 1, 2, 1, 3, 2, 1, 1, 4, 2, 1, 3, 1, 2]
   for (let i = 0; i < barCount; i++) {
-    // Random bar width (1x, 2x, 3x, or 4x base width)
-    const multiplier = [1, 1, 1, 2, 2, 3, 4][Math.floor(Math.random() * 7)]
-    barWidths.push(barWidth * multiplier)
+    barWidths.push(barWidth * pattern[i % pattern.length])
   }
   
   // Calculate total width with varying bar widths
   const totalWidth = barWidths.reduce((sum, w) => sum + w, 0)
   let currentX = -totalWidth / 2
   
-  // Distribute points across bars
+  // Distribute points across bars - SHARP, DEFINED bars
   for (let barIndex = 0; barIndex < barCount; barIndex++) {
     const barWidth = barWidths[barIndex]
     const barX = currentX + barWidth / 2
     const pointsPerBar = Math.floor((pointCount / barCount) * (barWidth / barWidths[0]))
     
+    // Create sharp, defined bars (less random distribution, more uniform)
     for (let i = 0; i < pointsPerBar; i++) {
-      const x = barX + (Math.random() - 0.5) * barWidth * 0.8
-      const y = (Math.random() - 0.5) * height
-      const z = (Math.random() - 0.5) * 0.1 // Slight depth
+      // More uniform distribution for sharper bars
+      const u = i / pointsPerBar // 0 to 1
+      const v = (i % 10) / 10 // For vertical distribution
+      
+      const x = barX + (u - 0.5) * barWidth * 0.6 // Tighter distribution (0.6 instead of 0.8)
+      const y = (v - 0.5) * height * 0.9 // More organized vertical distribution
+      const z = (Math.random() - 0.5) * 0.05 // Less depth for sharper look
       
       positions.push(x, y, z)
     }
@@ -84,12 +88,15 @@ function generateBarcodePositions(pointCount: number): Float32Array {
   
   // Fill remaining points if needed
   while (positions.length / 3 < pointCount) {
-    const barIndex = Math.floor(Math.random() * barCount)
+    const barIndex = Math.floor((positions.length / 3) % barCount)
     const barWidth = barWidths[barIndex]
     const barX = -totalWidth / 2 + barWidths.slice(0, barIndex).reduce((sum, w) => sum + w, 0) + barWidth / 2
-    const x = barX + (Math.random() - 0.5) * barWidth * 0.8
-    const y = (Math.random() - 0.5) * height
-    const z = (Math.random() - 0.5) * 0.1
+    
+    const u = Math.random()
+    const v = Math.random()
+    const x = barX + (u - 0.5) * barWidth * 0.6
+    const y = (v - 0.5) * height * 0.9
+    const z = (Math.random() - 0.5) * 0.05
     
     positions.push(x, y, z)
   }
@@ -193,17 +200,55 @@ export function HeroAnimation({
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
-    // Update scan line position and shader uniforms during intro and barcode phases
+    // Calculate scan line position (for barcode evolution)
+    let scanLineX = 0
     if ((phase === 'intro' || phase === 'barcode') && scanLineRef.current && scanMaterialRef.current) {
       // Scan line sweeps across barcode (continuous sweep)
       const scanProgress = (state.clock.elapsedTime % 2.5) / 2.5 // 2.5 second sweep cycle
-      scanLineRef.current.position.x = -3 + (scanProgress * 6) // Sweep from -3 to 3
+      scanLineX = -3 + (scanProgress * 6) // Sweep from -3 to 3
+      scanLineRef.current.position.x = scanLineX
       scanLineRef.current.visible = true
       
       // Update shader uniforms
       scanMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime
+      
+      // Update barcode particle opacity based on scan line position
+      // Particles appear/evolve as scan line approaches, fade after it passes
+      if (barcodePointsRef.current && barcodeMaterialRef.current) {
+        const barcodePositions = barcodePointsRef.current.geometry.attributes.position.array as Float32Array
+        const scanWidth = 0.8 // Width of scan effect
+        const fadeWidth = 0.4 // Fade distance after scan
+        
+        // Calculate opacity for each particle based on distance from scan line
+        let maxOpacity = 0
+        for (let i = 0; i < barcodePositions.length; i += 3) {
+          const particleX = barcodePositions[i]
+          const distFromScan = Math.abs(particleX - scanLineX)
+          
+          if (distFromScan < scanWidth) {
+            // Particle is near scan line - full opacity
+            maxOpacity = Math.max(maxOpacity, 1.0)
+          } else if (distFromScan < scanWidth + fadeWidth) {
+            // Particle is fading after scan passed
+            const fadeProgress = (distFromScan - scanWidth) / fadeWidth
+            maxOpacity = Math.max(maxOpacity, 1.0 - fadeProgress)
+          }
+        }
+        
+        // Smooth opacity transition
+        const targetOpacity = Math.max(0.3, maxOpacity * 0.85) // Minimum 30% opacity, max 85%
+        barcodeMaterialRef.current.opacity = THREE.MathUtils.lerp(
+          barcodeMaterialRef.current.opacity,
+          targetOpacity,
+          delta * 5
+        )
+      }
     } else if (scanLineRef.current) {
       scanLineRef.current.visible = false
+      // Hide barcode particles when scan line is hidden
+      if (barcodeMaterialRef.current) {
+        barcodeMaterialRef.current.opacity = 0
+      }
     }
     
     // NEW FLOW: Chaos background → Rapid product cycling
