@@ -4,7 +4,6 @@ import * as THREE from 'three'
 import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
-import { useTShirtPositions } from './TShirtGeometry'
 
 interface Product {
   name: string
@@ -61,21 +60,19 @@ export function HeroAnimation({
   // Load all product models
   const wineBottle = useWineBottlePositions(pointCount)
   const battery = useBatteryPositions(pointCount)
-  const tshirt = useTShirtPositions(pointCount)
   
   // Generate all position sets
   const positionSets = useMemo(() => {
     const scatter = generateScatterPositions(pointCount)
-    // Map products: wine bottle first, then battery, then t-shirt
+    // Map products: wine bottle first, then battery
     const productPositions = products.map((product, index) => {
       if (index === 0) return wineBottle
       if (index === 1) return battery
-      if (index === 2) return tshirt
       return wineBottle // fallback
     })
     
     return { scatter, products: productPositions }
-  }, [pointCount, products, wineBottle, battery, tshirt])
+  }, [pointCount, products, wineBottle, battery])
   
   // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
   // Flow: Chaos background → "Scan any product" → Rapid product cycling
