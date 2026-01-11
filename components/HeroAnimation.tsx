@@ -20,7 +20,7 @@ interface HeroAnimationProps {
 // Generate barcode positions
 function generateBarcodePositions(pointCount: number): Float32Array {
   const positions: number[] = []
-  const width = 1.8
+  const width = 1.3  // Reduced from 1.8 to better fit screen width
   const height = 0.9
   const barCount = 40
   
