@@ -1,14 +1,9 @@
 import { useRef, useMemo, useEffect, useState } from 'react'
-import { useFrame, useThree, extend } from '@react-three/fiber'
-import { shaderMaterial } from '@react-three/drei'
+import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
-import {
-  scanLightVertexShader,
-  scanLightFragmentShader
-} from './ScanLightShader'
 import { useTShirtPositions } from './TShirtGeometry'
 
 interface Product {
@@ -159,11 +154,10 @@ export function HeroAnimation({
   }, [pointCount, products, wineBottle, battery, tshirt])
   
   // Timeline configuration (in seconds)
-  // Flow: Intro (chaos) → Barcode (one scan) → Explosion (bar for bar) → Product cycling
+  // Flow: Intro (chaos) → Barcode → Product cycling
   const timeline = {
-    intro: 1.0,              // 0-1s: Brief intro
-    barcode: 3.0,            // 1-4s: Barcode visible, ONE scan
-    exploding: 2.0,          // 4-6s: Bars explode one by one
+    intro: 3.5,              // 0-3.5s: Intro with chaos, scan line, text appears
+    barcode: 2.0,            // 3.5-5.5s: Barcode visible
     productDuration: 2.5,    // Time to show each product (transform + display)
     transformDuration: 1.0   // Time to morph between products
   }
@@ -193,19 +187,6 @@ export function HeroAnimation({
     }
     return positions
   }, [positionSets, pointCount])
-  
-  // Target positions for explosion (scattered)
-  const explosionTargets = useMemo(() => {
-    const targets = new Float32Array(pointCount * 3)
-    for (let i = 0; i < pointCount; i++) {
-      const angle = Math.random() * Math.PI * 2
-      const radius = 1.5 + Math.random() * 2.0
-      targets[i * 3] = Math.cos(angle) * radius
-      targets[i * 3 + 1] = (Math.random() - 0.5) * 2.0
-      targets[i * 3 + 2] = Math.sin(angle) * radius
-    }
-    return targets
-  }, [pointCount])
   
   // Phase management
   useEffect(() => {
