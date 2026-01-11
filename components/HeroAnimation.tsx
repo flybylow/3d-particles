@@ -315,9 +315,9 @@ export function HeroAnimation({
       </points>
       
       {/* Scan line during intro phase */}
-      <group>
+      <group ref={scanLineRef}>
         {/* Main scan line */}
-        <mesh ref={scanLineRef} position={[-3, 0, 0.2]}>
+        <mesh position={[0, 0, 0.2]}>
           <planeGeometry args={[0.12, 4]} />
           <meshBasicMaterial
             color={colors.scanLight}
@@ -330,7 +330,7 @@ export function HeroAnimation({
         </mesh>
         
         {/* Scan line glow halo */}
-        <mesh ref={scanLineRef} position={[-3, 0, 0.1]}>
+        <mesh position={[0, 0, 0.1]}>
           <planeGeometry args={[0.5, 4.5]} />
           <meshBasicMaterial
             color={colors.scanLight}
