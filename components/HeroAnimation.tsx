@@ -25,14 +25,26 @@ function generateBarcodePositions(pointCount: number): Float32Array {
   const height = 0.9
   const barCount = 40
   
+  // First pass: calculate total width needed
+  const barWidths: number[] = []
+  let totalWidth = 0
+  for (let i = 0; i < barCount; i++) {
+    const isBar = i % 2 === 0
+    const barWidth = isBar 
+      ? (0.015 + Math.random() * 0.025)
+      : (0.008 + Math.random() * 0.015)
+    barWidths.push(barWidth)
+    totalWidth += barWidth
+  }
+  
+  // Normalize widths to fit exactly within desired width
+  const scale = width / totalWidth
   const bars: { x: number; w: number }[] = []
   let x = -width / 2
   
   for (let i = 0; i < barCount; i++) {
     const isBar = i % 2 === 0
-    const barWidth = isBar 
-      ? (0.015 + Math.random() * 0.025) * width
-      : (0.008 + Math.random() * 0.015) * width
+    const barWidth = barWidths[i] * scale
     
     if (isBar) {
       bars.push({ x: x + barWidth / 2, w: barWidth })
