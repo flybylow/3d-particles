@@ -38,6 +38,62 @@ function generateScatterPositions(pointCount: number, spread: number = 2.5): Flo
   return new Float32Array(positions)
 }
 
+// Generate barcode positions (vertical bars)
+function generateBarcodePositions(pointCount: number): Float32Array {
+  const positions: number[] = []
+  
+  // Barcode dimensions (centered at origin)
+  const width = 1.8 // Total width
+  const height = 0.9 // Total height
+  const barCount = 30 // Number of vertical bars
+  const baseBarWidth = width / barCount
+  
+  // Simple alternating pattern - thin/thick bars like real barcode
+  const barWidths: number[] = []
+  for (let i = 0; i < barCount; i++) {
+    // Alternate between thin (1x) and thick (1.5x) bars
+    const barWidth = (i % 3 === 0) ? baseBarWidth * 1.5 : baseBarWidth * 1.0
+    barWidths.push(barWidth)
+  }
+  
+  // Calculate total width
+  const totalWidth = barWidths.reduce((sum, w) => sum + w, 0)
+  let currentX = -totalWidth / 2
+  
+  // Distribute points across bars
+  for (let barIndex = 0; barIndex < barCount; barIndex++) {
+    const barWidth = barWidths[barIndex]
+    const barX = currentX + barWidth / 2
+    const pointsPerBar = Math.floor(pointCount / barCount)
+    
+    // Create clean, uniform bars
+    for (let i = 0; i < pointsPerBar; i++) {
+      const x = barX + (Math.random() - 0.5) * barWidth * 0.8
+      const y = (Math.random() - 0.5) * height * 0.9
+      const z = 0 // Flat barcode
+      
+      positions.push(x, y, z)
+    }
+    
+    currentX += barWidth
+  }
+  
+  // Fill remaining points
+  while (positions.length / 3 < pointCount) {
+    const barIndex = Math.floor((positions.length / 3) % barCount)
+    const barWidth = barWidths[barIndex]
+    const barX = -totalWidth / 2 + barWidths.slice(0, barIndex).reduce((sum, w) => sum + w, 0) + barWidth / 2
+    
+    const x = barX + (Math.random() - 0.5) * barWidth * 0.8
+    const y = (Math.random() - 0.5) * height * 0.9
+    const z = 0
+    
+    positions.push(x, y, z)
+  }
+  
+  return new Float32Array(positions.slice(0, pointCount * 3))
+}
+
 // Easing function for smoother animation
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -67,6 +123,7 @@ export function HeroAnimation({
   // Generate all position sets
   const positionSets = useMemo(() => {
     const scatter = generateScatterPositions(pointCount)
+    const barcode = generateBarcodePositions(pointCount)
     // Map products: wine bottle first, then battery, then t-shirt
     const productPositions = products.map((product, index) => {
       if (index === 0) return wineBottle
@@ -75,8 +132,13 @@ export function HeroAnimation({
       return wineBottle // fallback
     })
     
-    return { scatter, products: productPositions }
+    return { scatter, barcode, products: productPositions }
   }, [pointCount, products, wineBottle, battery, tshirt])
+  
+  // Barcode positions (static, visible from start)
+  const barcodePositions = useMemo(() => {
+    return positionSets.barcode.slice()
+  }, [positionSets])
   
   // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
   // Flow: Chaos background → "Scan any product" → Rapid product cycling
@@ -295,7 +357,7 @@ export function HeroAnimation({
   
   return (
     <>
-      {/* Particle system */}
+      {/* Chaos particles (background - orange) */}
       <points ref={pointsRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -307,6 +369,28 @@ export function HeroAnimation({
         </bufferGeometry>
         <pointsMaterial
           ref={materialRef}
+          size={pointSize}
+          color="#F8F8F7"
+          sizeAttenuation
+          transparent
+          opacity={0.92}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      
+      {/* Barcode particles (foreground - on top, visible from start) */}
+      <points ref={barcodePointsRef} position={[0, 0, 0.1]}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            array={barcodePositions}
+            count={pointCount}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          ref={barcodeMaterialRef}
           size={pointSize}
           color="#F8F8F7"
           sizeAttenuation
