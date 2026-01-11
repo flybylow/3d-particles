@@ -72,11 +72,29 @@ Each object type has a "home position" at origin before screen positioning:
 | Object | X Center | Y Center | Z Center | Notes |
 |--------|----------|----------|----------|-------|
 | Batteries | 0 (array centered) | 0 | 0 | 3 cylinders arranged horizontally |
-| Wine Bottle | 0 | 0 | 0 | Upright with cork pointing up |
+| Wine Bottle | 0 | 0 | 0 | Centered at middle of bottle (not bottom), cork pointing up |
 | Chocolate Bar | 0 | 0 | 0 | Horizontal bar layout |
 | Barcode | 0 | 0 | 0 | Vertical bars centered |
 
 All objects then receive the **same vertical offset** (`productYOffset = -0.5`) when displayed on screen during product phases.
+
+### Important: Vertical Centering
+
+For objects with significant height (like the wine bottle), the center point is calculated at the **middle of the object's bounding box**, not at its base. This ensures true vertical centering:
+
+```typescript
+// Calculate bounding box
+let minY = Infinity, maxY = -Infinity
+// ... collect all Y coordinates ...
+
+// Center offset: shift so middle is at Y=0
+const centerYOffset = (minY + maxY) / 2
+
+// Apply offset to all vertices
+positions[i + 1] -= centerYOffset
+```
+
+This way, when `productYOffset` is applied, the object's **visual center** aligns with the screen center, not its bottom edge.
 
 ## Lesson Learned
 

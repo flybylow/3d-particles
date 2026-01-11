@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 
 /**
  * Hook to extract vertices from the wine bottle GLTF model for particle positioning
+ * Wine bottle is centered at its middle point (not bottom) at origin (0,0,0)
  * @param pointCount - Number of particles to distribute across the model
  * @param scale - Scale factor to adjust model size (default 0.08 for good visibility)
  */
@@ -22,7 +23,10 @@ export function useWineBottlePositions(pointCount: number, scale: number = 0.08)
     const cosY = Math.cos(spinAngle)
     const sinY = Math.sin(spinAngle)
     
-    // Scale and rotate each vertex (centered at origin for uniform positioning)
+    // First pass: Scale and rotate, track bounds
+    let minY = Infinity
+    let maxY = -Infinity
+    
     for (let i = 0; i < positions.length; i += 3) {
       // Scale
       let x = positions[i] * scale
@@ -40,6 +44,18 @@ export function useWineBottlePositions(pointCount: number, scale: number = 0.08)
       positions[i] = x2
       positions[i + 1] = y1
       positions[i + 2] = z2
+      
+      // Track Y bounds
+      minY = Math.min(minY, y1)
+      maxY = Math.max(maxY, y1)
+    }
+    
+    // Calculate center offset: shift bottle so its middle is at Y=0
+    const centerYOffset = (minY + maxY) / 2
+    
+    // Second pass: Center the bottle vertically
+    for (let i = 1; i < positions.length; i += 3) {
+      positions[i] -= centerYOffset
     }
     
     return positions
