@@ -27,11 +27,11 @@ preloadWineBottle()
 // Three Act Narrative Structure
 const PHASES = {
   chaos: {
-    headline: 'Your supply chain is noise.',
+    headline: 'too much product info',
     subline: ''
   },
   coalescing: {
-    headline: 'Your supply chain is noise.',
+    headline: 'too much product info',
     subline: ''
   },
   barcode: {
