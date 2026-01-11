@@ -98,6 +98,7 @@ export function HeroAnimation({
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
   const [phase, setPhase] = useState<'chaos' | 'coalescing' | 'barcode' | 'transforming' | 'product'>('chaos')
   const phaseStartTime = useRef(0)
+  const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
   const { clock } = useThree()
   
   // Load wine bottle model positions
@@ -118,7 +119,7 @@ export function HeroAnimation({
     coalescing: 2.0,     // Particles gravitate and pull together (3-5s)
     barcode: 2.0,        // ACT 2: Barcode formation complete (5-7s)
     transforming: 2.0,   // Barcode transforms to product (7-9s)
-    product: 3.0         // ACT 3: Product reveal with text (9-12s)
+    product: 5.0         // ACT 3: Product reveal with text (9-14s) - longer rotation
   }
   
   // Initialize positions - Start with CHAOS
@@ -225,23 +226,29 @@ export function HeroAnimation({
     
     pointsRef.current.geometry.attributes.position.needsUpdate = true
     
-    // Rotation during product phase - rotate around bottle's own axis
+    // Rotation during product phase - rotate around bottle's center vertical axis
     if (shouldRotate && phase === 'product') {
-      // Rotate particles around the Y-axis (vertical center axis)
-      const rotationSpeed = delta * 0.15
-      const cos = Math.cos(rotationSpeed)
-      const sin = Math.sin(rotationSpeed)
+      // Increment rotation angle
+      rotationAngle.current += delta * 0.3
       
+      const cos = Math.cos(rotationAngle.current)
+      const sin = Math.sin(rotationAngle.current)
+      
+      // Apply rotation to target positions (not accumulated positions)
       for (let i = 0; i < positions.length; i += 3) {
-        const x = positions[i]
-        const z = positions[i + 2]
+        const targetX = target[i]
+        const targetZ = target[i + 2]
         
-        // Rotate around Y axis (vertical)
-        positions[i] = x * cos - z * sin
-        positions[i + 2] = x * sin + z * cos
+        // Rotate around Y axis (vertical center)
+        positions[i] = targetX * cos - targetZ * sin
+        positions[i + 1] = target[i + 1] // Keep Y unchanged
+        positions[i + 2] = targetX * sin + targetZ * cos
       }
       
       pointsRef.current.geometry.attributes.position.needsUpdate = true
+    } else if (rotationAngle.current !== 0) {
+      // Reset rotation when not in product phase
+      rotationAngle.current = 0
     }
   })
   

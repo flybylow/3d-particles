@@ -13,9 +13,9 @@ export function useWineBottlePositions(pointCount: number, scale: number = 0.08)
   return useMemo(() => {
     const positions = extractModelPositions(scene, pointCount)
     
-    // Rotate -90 degrees (rotate left around Y axis) and tilt for better viewing
+    // Rotate -90 degrees (rotate left around Y axis) and tilt upright
     const flipAngle = -Math.PI / 2 // -90 degrees
-    const tiltAngle = Math.PI * 0.15 // 27 degrees forward tilt
+    const tiltAngle = Math.PI * 0.4 // 72 degrees - more upright
     
     const cosY = Math.cos(flipAngle)
     const sinY = Math.sin(flipAngle)
