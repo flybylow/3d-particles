@@ -109,8 +109,10 @@ export function HeroAnimation({
   pointSize = 0.008,
   onPhaseChange
 }: HeroAnimationProps) {
-  const pointsRef = useRef<THREE.Points>(null)
+  const pointsRef = useRef<THREE.Points>(null) // Chaos particles (background)
   const materialRef = useRef<THREE.PointsMaterial>(null)
+  const barcodePointsRef = useRef<THREE.Points>(null) // Barcode particles (foreground, already formed)
+  const barcodeMaterialRef = useRef<THREE.PointsMaterial>(null)
   const scanLineRef = useRef<THREE.Mesh>(null)
   const scanMaterialRef = useRef<THREE.ShaderMaterial>(null)
   
@@ -174,6 +176,11 @@ export function HeroAnimation({
     return positionSets.scatter.slice()
   }, [positionSets])
   
+  // Barcode positions (already formed, static from start)
+  const barcodePositions = useMemo(() => {
+    return positionSets.barcode.slice()
+  }, [positionSets])
+  
   // Phase management
   useEffect(() => {
     phaseStartTime.current = clock.elapsedTime
@@ -186,21 +193,15 @@ export function HeroAnimation({
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
-    // Update scan line position and shader uniforms during intro phase
-    if (phase === 'intro' && scanLineRef.current && scanMaterialRef.current) {
-      const morphStartTime = timeline.intro - 1.2
-      if (elapsed < morphStartTime) {
-        // Scan line sweeps across during chaos phase
-        const scanProgress = (elapsed % 2.5) / 2.5 // 2.5 second sweep cycle
-        scanLineRef.current.position.x = -3 + (scanProgress * 6) // Sweep from -3 to 3
-        scanLineRef.current.visible = true
-        
-        // Update shader uniforms
-        scanMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime
-      } else {
-        // Hide scan line when morphing to product
-        scanLineRef.current.visible = false
-      }
+    // Update scan line position and shader uniforms during intro and barcode phases
+    if ((phase === 'intro' || phase === 'barcode') && scanLineRef.current && scanMaterialRef.current) {
+      // Scan line sweeps across barcode (continuous sweep)
+      const scanProgress = (state.clock.elapsedTime % 2.5) / 2.5 // 2.5 second sweep cycle
+      scanLineRef.current.position.x = -3 + (scanProgress * 6) // Sweep from -3 to 3
+      scanLineRef.current.visible = true
+      
+      // Update shader uniforms
+      scanMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime
     } else if (scanLineRef.current) {
       scanLineRef.current.visible = false
     }
@@ -251,25 +252,17 @@ export function HeroAnimation({
         break
         
       case 'barcode':
-        // Barcode phase: Particles form into barcode pattern
-        const barcodeElapsed = elapsed
-        const barcodeProgress = Math.min(barcodeElapsed / timeline.barcode, 1)
-        const barcodeEased = easeInOutCubic(barcodeProgress)
+        // Barcode phase: Barcode already formed, wait for scan
+        // Barcode particles are static (already visible from start)
+        target = positionSets.scatter // Keep chaos particles as background
+        progress = 1
+        particleColor = colors.chaosWarm
         
-        target = positionSets.barcode
-        progress = barcodeEased
-        particleColor = new THREE.Color().lerpColors(
-          colors.chaosWarm,
-          colors.scanLight,
-          barcodeEased
-        )
-        
-        // Hide scan line during barcode phase
-        if (scanLineRef.current) {
-          scanLineRef.current.visible = false
-        }
-        
-        if (barcodeElapsed > timeline.barcode) {
+        // Hide scan line after barcode phase completes
+        if (elapsed > timeline.barcode) {
+          if (scanLineRef.current) {
+            scanLineRef.current.visible = false
+          }
           setPhase('cycling')
           productStartTime.current = clock.elapsedTime
           setCurrentProductIndex(0)
@@ -395,7 +388,7 @@ export function HeroAnimation({
   
   return (
     <>
-      {/* Particle system */}
+      {/* Chaos particles (background) */}
       <points ref={pointsRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -411,7 +404,29 @@ export function HeroAnimation({
           color="#F8F8F7"
           sizeAttenuation
           transparent
-          opacity={0.92}
+          opacity={0.4}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
+        />
+      </points>
+      
+      {/* Barcode particles (foreground, already formed from start) */}
+      <points ref={barcodePointsRef} position={[0, 0, 0.1]}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            array={barcodePositions}
+            count={pointCount}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          ref={barcodeMaterialRef}
+          size={pointSize * 1.2}
+          color={colors.scanLight}
+          sizeAttenuation
+          transparent
+          opacity={0.85}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
         />
