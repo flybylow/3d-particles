@@ -38,11 +38,15 @@ preloadWineBottle()
 preloadBattery()
 preloadTShirt()
 
-// NEW FLOW: Chaos background → Rapid product cycling
-// Copy: "Scan any product." → Product labels (check, check, check!)
+// Flow: Intro (chaos) → Barcode → Product cycling
+// Copy: "Scan any product." → "Verify." → Product labels
 const PHASES = {
   intro: {
-    headline: 'Scan any product.', // 0-2.5s: Intro with chaos background
+    headline: 'Scan any product.', // 0-3.5s: Intro with chaos background
+    subline: ''
+  },
+  barcode: {
+    headline: 'Verify.', // 3.5-5.5s: Barcode formation
     subline: ''
   },
   cycling: {
@@ -83,8 +87,8 @@ export function HomepageHero() {
         </Canvas>
       </div>
       
-      {/* Text Overlay - "Scan any product." */}
-      <div className={`hero-text ${phase === 'intro' ? 'visible' : ''}`}>
+      {/* Text Overlay */}
+      <div className={`hero-text ${phase === 'intro' || phase === 'barcode' ? 'visible' : ''}`}>
         <h1>{PHASES[phase as keyof typeof PHASES]?.headline || ''}</h1>
       </div>
       

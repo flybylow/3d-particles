@@ -43,6 +43,61 @@ function generateScatterPositions(pointCount: number, spread: number = 2.5): Flo
   return new Float32Array(positions)
 }
 
+// Generate barcode positions (vertical bars)
+function generateBarcodePositions(pointCount: number): Float32Array {
+  const positions: number[] = []
+  
+  // Barcode dimensions (centered at origin)
+  const width = 1.8 // Total width
+  const height = 0.9 // Total height
+  const barCount = 40 // Number of vertical bars
+  const barWidth = width / barCount
+  
+  // Generate bar widths (varying thickness like real barcode)
+  const barWidths: number[] = []
+  for (let i = 0; i < barCount; i++) {
+    // Random bar width (1x, 2x, 3x, or 4x base width)
+    const multiplier = [1, 1, 1, 2, 2, 3, 4][Math.floor(Math.random() * 7)]
+    barWidths.push(barWidth * multiplier)
+  }
+  
+  // Calculate total width with varying bar widths
+  const totalWidth = barWidths.reduce((sum, w) => sum + w, 0)
+  let currentX = -totalWidth / 2
+  
+  // Distribute points across bars
+  for (let barIndex = 0; barIndex < barCount; barIndex++) {
+    const barWidth = barWidths[barIndex]
+    const barX = currentX + barWidth / 2
+    const pointsPerBar = Math.floor((pointCount / barCount) * (barWidth / barWidths[0]))
+    
+    for (let i = 0; i < pointsPerBar; i++) {
+      const x = barX + (Math.random() - 0.5) * barWidth * 0.8
+      const y = (Math.random() - 0.5) * height
+      const z = (Math.random() - 0.5) * 0.1 // Slight depth
+      
+      positions.push(x, y, z)
+    }
+    
+    currentX += barWidth
+  }
+  
+  // Fill remaining points if needed
+  while (positions.length / 3 < pointCount) {
+    const barIndex = Math.floor(Math.random() * barCount)
+    const barWidth = barWidths[barIndex]
+    const barX = -totalWidth / 2 + barWidths.slice(0, barIndex).reduce((sum, w) => sum + w, 0) + barWidth / 2
+    const x = barX + (Math.random() - 0.5) * barWidth * 0.8
+    const y = (Math.random() - 0.5) * height
+    const z = (Math.random() - 0.5) * 0.1
+    
+    positions.push(x, y, z)
+  }
+  
+  // Trim to exact point count
+  return new Float32Array(positions.slice(0, pointCount * 3))
+}
+
 // Easing function for smoother animation
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
@@ -71,7 +126,7 @@ export function HeroAnimation({
     []
   )
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
-  const [phase, setPhase] = useState<'intro' | 'cycling'>('intro')
+  const [phase, setPhase] = useState<'intro' | 'barcode' | 'cycling'>('intro')
   const phaseStartTime = useRef(0)
   const productStartTime = useRef(0) // Track when current product started
   const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
@@ -85,6 +140,7 @@ export function HeroAnimation({
   // Generate all position sets
   const positionSets = useMemo(() => {
     const scatter = generateScatterPositions(pointCount)
+    const barcode = generateBarcodePositions(pointCount)
     // Map products: wine bottle first, then battery, then t-shirt
     const productPositions = products.map((product, index) => {
       if (index === 0) return wineBottle
@@ -93,13 +149,14 @@ export function HeroAnimation({
       return wineBottle // fallback
     })
     
-    return { scatter, products: productPositions }
+    return { scatter, barcode, products: productPositions }
   }, [pointCount, products, wineBottle, battery, tshirt])
   
-  // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
-  // Flow: Chaos background → "Scan any product" → Rapid product cycling
+  // Timeline configuration (in seconds)
+  // Flow: Intro (chaos) → Barcode → Product cycling
   const timeline = {
-    intro: 3.5,              // 0-3.5s: Intro with chaos, text appears
+    intro: 3.5,              // 0-3.5s: Intro with chaos, scan line, text appears
+    barcode: 2.0,            // 3.5-5.5s: Barcode formation and hold
     productDuration: 2.5,    // Time to show each product (transform + display)
     transformDuration: 1.0   // Time to morph between products
   }
