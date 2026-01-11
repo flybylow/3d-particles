@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { useMemo } from 'react'
 
 // Generate procedural battery positions with realistic details
+// Batteries are centered at origin (0,0,0) for uniform positioning
 export function generateBatteryPositions(pointCount: number): Float32Array {
   const positions: number[] = []
   
@@ -11,7 +12,6 @@ export function generateBatteryPositions(pointCount: number): Float32Array {
   const batteryHeight = 0.8
   const spacing = 0.08
   const totalWidth = (batteryRadius * 2 * batteryCount) + (spacing * (batteryCount - 1))
-  const yOffset = -0.9 // Move batteries down on screen
   
   // Points distribution
   const pointsPerBattery = Math.floor(pointCount / batteryCount)
@@ -32,7 +32,7 @@ export function generateBatteryPositions(pointCount: number): Float32Array {
       // Add vertical ridges for texture
       const ridgePattern = Math.abs(Math.sin(angle * 12)) < 0.2
       if (ridgePattern || Math.random() > 0.2) {
-        positions.push(x, y + yOffset, z)
+        positions.push(x, y, z)
       }
     }
     
@@ -45,7 +45,7 @@ export function generateBatteryPositions(pointCount: number): Float32Array {
       const x = xOffset + Math.cos(angle) * r
       const z = Math.sin(angle) * r
       const y = batteryHeight * 0.42 + Math.random() * 0.08 // Top terminal area
-      positions.push(x, y + yOffset, z)
+      positions.push(x, y, z)
     }
     
     // Negative terminal (bottom - 10% of points)
@@ -56,7 +56,7 @@ export function generateBatteryPositions(pointCount: number): Float32Array {
       const x = xOffset + Math.cos(angle) * r
       const z = Math.sin(angle) * r
       const y = -batteryHeight * 0.42 + Math.random() * 0.03
-      positions.push(x, y + yOffset, z)
+      positions.push(x, y, z)
     }
     
     // Label band (5% of points) - on the surface
@@ -66,7 +66,7 @@ export function generateBatteryPositions(pointCount: number): Float32Array {
       const x = xOffset + Math.cos(angle) * batteryRadius * 1.01 // Slightly outside surface
       const z = Math.sin(angle) * batteryRadius * 1.01
       const y = (Math.random() - 0.5) * 0.2 // Band in middle
-      positions.push(x, y + yOffset, z)
+      positions.push(x, y, z)
     }
   }
   
@@ -79,7 +79,7 @@ export function generateBatteryPositions(pointCount: number): Float32Array {
     const x = xOffset + Math.cos(angle) * r
     const z = Math.sin(angle) * r
     const y = (Math.random() - 0.5) * batteryHeight * 0.75
-    positions.push(x, y + yOffset, z)
+    positions.push(x, y, z)
   }
   
   return new Float32Array(positions.slice(0, pointCount * 3))

@@ -22,9 +22,7 @@ export function useWineBottlePositions(pointCount: number, scale: number = 0.08)
     const cosY = Math.cos(spinAngle)
     const sinY = Math.sin(spinAngle)
     
-    // Scale and rotate each vertex
-    const yOffset = -1.3 // Move bottle down lower on screen
-    
+    // Scale and rotate each vertex (centered at origin for uniform positioning)
     for (let i = 0; i < positions.length; i += 3) {
       // Scale
       let x = positions[i] * scale
@@ -39,9 +37,8 @@ export function useWineBottlePositions(pointCount: number, scale: number = 0.08)
       const x2 = x * cosY + z1 * sinY
       const z2 = -x * sinY + z1 * cosY
       
-      // Apply vertical offset to center on screen
       positions[i] = x2
-      positions[i + 1] = y1 + yOffset
+      positions[i + 1] = y1
       positions[i + 2] = z2
     }
     

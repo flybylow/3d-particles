@@ -238,6 +238,9 @@ export function HeroAnimation({
     }
     
     // Interpolate positions with staggered timing
+    // Apply uniform Y offset for products (all objects centered at origin by default)
+    const productYOffset = -0.5 // Vertical position adjustment for products
+    
     for (let i = 0; i < positions.length; i += 3) {
       const pointIndex = i / 3
       const stagger = (pointIndex / pointCount) * 0.3
@@ -245,9 +248,16 @@ export function HeroAnimation({
       
       for (let j = 0; j < 3; j++) {
         const idx = i + j
+        let targetValue = target[idx]
+        
+        // Apply vertical offset for product phases (Y coordinate)
+        if (j === 1 && (phase === 'transforming' || phase === 'product')) {
+          targetValue += productYOffset
+        }
+        
         positions[idx] = THREE.MathUtils.lerp(
           positions[idx],
-          target[idx],
+          targetValue,
           localProgress * delta * 8
         )
       }
@@ -262,6 +272,7 @@ export function HeroAnimation({
       
       const cos = Math.cos(rotationAngle.current)
       const sin = Math.sin(rotationAngle.current)
+      const productYOffset = -0.5 // Same offset as above for consistency
       
       // Apply rotation to target positions (not accumulated positions)
       for (let i = 0; i < positions.length; i += 3) {
@@ -270,7 +281,7 @@ export function HeroAnimation({
         
         // Rotate around Y axis (vertical center)
         positions[i] = targetX * cos - targetZ * sin
-        positions[i + 1] = target[i + 1] // Keep Y unchanged
+        positions[i + 1] = target[i + 1] + productYOffset // Apply Y offset
         positions[i + 2] = targetX * sin + targetZ * cos
       }
       
