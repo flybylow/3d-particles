@@ -50,7 +50,7 @@ const PHASES = {
     subline: ''
   },
   scanning: {
-    headline: 'Any product.', // Maintain during lightning awakening
+    headline: '', // No text during lightning awakening - let visuals speak
     subline: ''
   },
   barcode: {

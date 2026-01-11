@@ -116,6 +116,7 @@ export function HeroAnimation({
   const scanLightRef = useRef<THREE.Mesh>(null)
   const scanGlowRef = useRef<THREE.Mesh>(null)
   const scanShaderRef = useRef<THREE.ShaderMaterial>(null)
+  const lightningFlashRef = useRef<THREE.Mesh>(null) // Flash overlay for lightning effect
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
   const [phase, setPhase] = useState<'chaos' | 'failedScan' | 'scanning' | 'barcode' | 'holding' | 'transforming' | 'product'>('chaos')
   const phaseStartTime = useRef(0)
@@ -199,6 +200,7 @@ export function HeroAnimation({
     let particleColor = colors.offWhite
     let scanLightPosition = -3 // Off-screen left
     let scanLightVisible = false
+    let lightningFlashOpacity = 0 // Flash overlay opacity
     
     switch (phase) {
       case 'chaos':
@@ -241,14 +243,58 @@ export function HeroAnimation({
         break
         
       case 'scanning':
-        // ACT 2: THE SCAN - light sweeps, particles RESPOND and align
+        // ACT 2: THE AWAKENING - Electric lightning strike & particle ignition
         target = positionSets.barcode
-        scanLightVisible = true
-        const scanT = Math.min(elapsed / timeline.scanning, 1)
-        scanLightPosition = -2 + (scanT * 4) // Sweep left to right
-        progress = scanT // Particles align as light passes
-        // Color transition from warm to cool
-        particleColor = new THREE.Color().lerpColors(colors.chaosWarm, colors.scanLight, scanT)
+        const awakeningT = Math.min(elapsed / timeline.scanning, 1)
+        
+        // PHASE 1: Lightning Strike (0-1s) - Instant flash
+        if (elapsed < 1.0) {
+          const flashT = elapsed / 1.0
+          // Bright electric blue-white flash
+          particleColor = new THREE.Color(0xFFFFFF) // Pure white flash
+          scanLightVisible = true
+          scanLightPosition = Math.sin(flashT * Math.PI * 4) * 2 // Zigzag lightning path
+          progress = flashT * 0.3 // Particles start reacting
+          
+          // Screen flash - bright at start, fades quickly
+          lightningFlashOpacity = Math.max(0, 0.6 - (flashT * 0.6)) * Math.sin(flashT * 15)
+          
+          // Pulsing size for energy burst
+          if (materialRef.current) {
+            materialRef.current.size = pointSize * (1 + Math.sin(flashT * 20) * 0.5)
+          }
+        }
+        // PHASE 2: Chain Reaction (1-2.5s) - Energy spreads
+        else if (elapsed < 2.5) {
+          const chainT = (elapsed - 1.0) / 1.5
+          // Electric blue color
+          particleColor = new THREE.Color(0x4CC9F0)
+          progress = 0.3 + (chainT * 0.4) // Particles moving toward barcode
+          scanLightVisible = false
+          lightningFlashOpacity = 0
+          
+          // Rapid pulsing as energy spreads
+          if (materialRef.current) {
+            materialRef.current.size = pointSize * (1 + Math.sin(chainT * 30) * 0.3)
+          }
+        }
+        // PHASE 3: Formation (2.5-4s) - Barcode locks in
+        else {
+          const formT = (elapsed - 2.5) / 1.5
+          particleColor = new THREE.Color().lerpColors(
+            new THREE.Color(0x4CC9F0),
+            colors.verifiedCool,
+            formT
+          )
+          progress = 0.7 + (formT * 0.3) // Final alignment
+          scanLightVisible = false
+          lightningFlashOpacity = 0
+          
+          // Size stabilizes
+          if (materialRef.current) {
+            materialRef.current.size = pointSize * (1 + (1 - formT) * 0.2)
+          }
+        }
         
         if (elapsed > timeline.scanning) {
           setPhase('barcode')
@@ -261,6 +307,10 @@ export function HeroAnimation({
         target = positionSets.barcode
         progress = 1
         particleColor = colors.scanLight
+        // Reset particle size to normal
+        if (materialRef.current) {
+          materialRef.current.size = pointSize
+        }
         if (elapsed > timeline.barcode) {
           setPhase('holding')
           onPhaseChange?.('holding', currentProductIndex)
@@ -350,6 +400,13 @@ export function HeroAnimation({
           scanShaderRef.current.uniforms.uIntensity.value = 0.85
         }
       }
+    }
+    
+    // Update lightning flash overlay
+    if (lightningFlashRef.current) {
+      const flashMaterial = lightningFlashRef.current.material as THREE.MeshBasicMaterial
+      flashMaterial.opacity = lightningFlashOpacity
+      lightningFlashRef.current.visible = lightningFlashOpacity > 0
     }
     
     // Interpolate positions with staggered timing
@@ -456,6 +513,18 @@ export function HeroAnimation({
           blending={THREE.AdditiveBlending}
           depthWrite={false}
           side={THREE.DoubleSide}
+        />
+      </mesh>
+      
+      {/* Lightning Flash Overlay - Full-screen flash during awakening */}
+      <mesh ref={lightningFlashRef} visible={false} position={[0, 0, 2]}>
+        <planeGeometry args={[10, 10]} />
+        <meshBasicMaterial
+          color="#FFFFFF"
+          transparent
+          opacity={0}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
         />
       </mesh>
     </>
