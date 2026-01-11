@@ -1,12 +1,49 @@
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
+import { useMemo } from 'react'
 
 /**
- * Extract vertices from the wine bottle GLTF model for particle positioning
+ * Hook to extract vertices from the wine bottle GLTF model for particle positioning
+ * @param pointCount - Number of particles to distribute across the model
+ * @param scale - Scale factor to adjust model size (default 0.08 for good visibility)
  */
-export function extractWineBottlePositions(pointCount: number): Float32Array {
+export function useWineBottlePositions(pointCount: number, scale: number = 0.08): Float32Array {
   const { scene } = useGLTF('/models/wine-bottle.gltf')
-  return extractModelPositions(scene, pointCount)
+  
+  return useMemo(() => {
+    const positions = extractModelPositions(scene, pointCount)
+    
+    // Rotate -90 degrees (rotate left around Y axis) and tilt for better viewing
+    const flipAngle = -Math.PI / 2 // -90 degrees
+    const tiltAngle = Math.PI * 0.15 // 27 degrees forward tilt
+    
+    const cosY = Math.cos(flipAngle)
+    const sinY = Math.sin(flipAngle)
+    const cosX = Math.cos(tiltAngle)
+    const sinX = Math.sin(tiltAngle)
+    
+    // Scale and rotate each vertex
+    for (let i = 0; i < positions.length; i += 3) {
+      // Scale
+      let x = positions[i] * scale
+      let y = positions[i + 1] * scale
+      let z = positions[i + 2] * scale
+      
+      // First flip 180 degrees around Y axis
+      const x1 = x * cosY + z * sinY
+      const z1 = -x * sinY + z * cosY
+      
+      // Then tilt forward around X axis
+      const y2 = y * cosX - z1 * sinX
+      const z2 = y * sinX + z1 * cosX
+      
+      positions[i] = x1
+      positions[i + 1] = y2
+      positions[i + 2] = z2
+    }
+    
+    return positions
+  }, [scene, pointCount, scale])
 }
 
 /**

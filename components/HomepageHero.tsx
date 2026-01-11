@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { HeroAnimation } from './HeroAnimation'
+import { preloadWineBottle } from './WineBottleGeometry'
 import './HomepageHero.css'
 
 interface Product {
@@ -11,14 +12,17 @@ interface Product {
   category: string
 }
 
-// Focus on single chocolate bar for hero moment
+// Wine bottle for hero moment
 const PRODUCTS: Product[] = [
   {
-    name: 'Chocolate Bar',
-    modelPath: '/models/chocolate-bar.glb',
+    name: 'Wine Bottle',
+    modelPath: '/models/wine-bottle.gltf',
     category: 'Food & Beverage'
   }
 ]
+
+// Preload wine bottle model
+preloadWineBottle()
 
 // Three Act Narrative Structure
 const PHASES = {

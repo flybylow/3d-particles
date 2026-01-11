@@ -2,6 +2,7 @@ import { useRef, useMemo, useEffect, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { generateChocolateBarPositions } from './ChocolateBarGeometry'
+import { useWineBottlePositions } from './WineBottleGeometry'
 
 interface Product {
   name: string
@@ -99,16 +100,17 @@ export function HeroAnimation({
   const phaseStartTime = useRef(0)
   const { clock } = useThree()
   
+  // Load wine bottle model positions
+  const wineBottle = useWineBottlePositions(pointCount)
+  
   // Generate all position sets
   const positionSets = useMemo(() => {
     const barcode = generateBarcodePositions(pointCount)
     const scatter = generateScatterPositions(pointCount)
-    // Use geometric chocolate bar for all products
-    const chocolateBar = generateChocolateBarPositions(pointCount)
-    const productPositions = products.map(() => chocolateBar)
+    const productPositions = products.map(() => wineBottle)
     
     return { barcode, scatter, products: productPositions }
-  }, [pointCount, products])
+  }, [pointCount, products, wineBottle])
   
   // Timeline configuration (in seconds) - Three Act Structure
   const timeline = {
@@ -223,12 +225,23 @@ export function HeroAnimation({
     
     pointsRef.current.geometry.attributes.position.needsUpdate = true
     
-    // Rotation during product phase
-    if (shouldRotate) {
-      pointsRef.current.rotation.y += delta * 0.15
-    } else {
-      // Smoothly return to front-facing
-      pointsRef.current.rotation.y *= 0.95
+    // Rotation during product phase - rotate around bottle's own axis
+    if (shouldRotate && phase === 'product') {
+      // Rotate particles around the Y-axis (vertical center axis)
+      const rotationSpeed = delta * 0.15
+      const cos = Math.cos(rotationSpeed)
+      const sin = Math.sin(rotationSpeed)
+      
+      for (let i = 0; i < positions.length; i += 3) {
+        const x = positions[i]
+        const z = positions[i + 2]
+        
+        // Rotate around Y axis (vertical)
+        positions[i] = x * cos - z * sin
+        positions[i + 2] = x * sin + z * cos
+      }
+      
+      pointsRef.current.geometry.attributes.position.needsUpdate = true
     }
   })
   
