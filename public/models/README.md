@@ -1,12 +1,48 @@
 # 3D Models
 
-This directory is reserved for 3D model files (.glb, .gltf) if needed in the future.
+This directory contains 3D model files for the particle animation system.
 
-## Current Implementation
+## Available Models
 
-The animation currently uses **procedurally generated geometry** instead of external model files:
-- See `components/ChocolateBarGeometry.tsx` for the chocolate bar implementation
-- Benefits: Better performance, no file loading, flexible customization, consistent particle distribution
+### 🍫 Chocolate Bar (Default - Procedural)
+**File:** Generated procedurally in code  
+**Component:** `components/ChocolateBarGeometry.tsx`  
+**Vertices:** 20,000 (configurable)  
+**Benefits:** No file loading, perfect particle distribution, fast performance
+
+### 🍷 Wine Bottle (GLTF Model)
+**Files:** `wine-bottle.gltf` + `wine-bottle.bin`  
+**Component:** `components/WineBottleGeometry.tsx`  
+**Vertices:** 2,125 (sampled to match particle count)  
+**Dimensions:** ~7.6 units wide × 29.6 units tall  
+**Source:** Professional 3D model
+
+## Switching Products
+
+To use the wine bottle instead of chocolate:
+
+1. **Update product configuration** in `components/HomepageHero.tsx`:
+```typescript
+const PRODUCTS: Product[] = [
+  {
+    name: 'Wine Bottle',
+    modelPath: '/models/wine-bottle.gltf',
+    category: 'Food & Beverage'
+  }
+]
+```
+
+2. **Import wine bottle component** in `components/HeroAnimation.tsx`:
+```typescript
+import { extractWineBottlePositions, preloadWineBottle } from './WineBottleGeometry'
+```
+
+3. **Use extracted positions** instead of procedural geometry:
+```typescript
+const chocolateBar = useMemo(() => extractWineBottlePositions(pointCount), [pointCount])
+```
+
+4. **Preload the model** at app startup for better performance
 
 ## Future Usage
 
