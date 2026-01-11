@@ -156,11 +156,11 @@ export function HeroAnimation({
   // Camera positions (Three.js uses positive Z for camera distance)
   // Per spec: WIDE (far) → PUSH IN → CLOSE → INTO (very close)
   const cameraPositions = {
-    wide: { z: 50, fov: 60 },    // Much further back for wide shot (see all products)
-    merge: { z: 30, fov: 50 },   // Pushing in
-    barcode: { z: 15, fov: 45 },  // Closer
-    product: { z: 10, fov: 40 },  // Close
-    portal: { z: 5, fov: 30 }    // Very close (into product)
+    wide: { z: 80, fov: 60 },    // Very far back for wide shot (see all products)
+    merge: { z: 50, fov: 50 },   // Pushing in
+    barcode: { z: 25, fov: 45 },  // Closer
+    product: { z: 15, fov: 40 },  // Close
+    portal: { z: 8, fov: 30 }    // Very close (into product)
   }
   
   // Initialize positions

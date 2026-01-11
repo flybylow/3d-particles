@@ -91,7 +91,7 @@ export function HomepageHero() {
       {/* 3D Canvas */}
       <div className="hero-canvas">
         <Canvas
-          camera={{ position: [0, 0, 50], fov: 60 }}
+          camera={{ position: [0, 0, 80], fov: 60 }}
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           dpr={[1, 2]}
         >
