@@ -51,6 +51,7 @@ export function HeroAnimation({
 }: HeroAnimationProps) {
   const pointsRef = useRef<THREE.Points>(null)
   const materialRef = useRef<THREE.PointsMaterial>(null)
+  const scanLineRef = useRef<THREE.Group>(null)
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
   const [phase, setPhase] = useState<'intro' | 'cycling'>('intro')
   const phaseStartTime = useRef(0)
@@ -109,6 +110,22 @@ export function HeroAnimation({
     
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
+    
+    // Update scan line position during intro phase
+    if (phase === 'intro' && scanLineRef.current) {
+      const morphStartTime = timeline.intro - 1.2
+      if (elapsed < morphStartTime) {
+        // Scan line sweeps across during chaos phase
+        const scanProgress = (elapsed % 2.5) / 2.5 // 2.5 second sweep cycle
+        scanLineRef.current.position.x = -3 + (scanProgress * 6) // Sweep from -3 to 3
+        scanLineRef.current.visible = true
+      } else {
+        // Hide scan line when morphing to product
+        scanLineRef.current.visible = false
+      }
+    } else if (scanLineRef.current) {
+      scanLineRef.current.visible = false
+    }
     
     // NEW FLOW: Chaos background → Rapid product cycling
     let target: Float32Array
@@ -296,6 +313,35 @@ export function HeroAnimation({
           blending={THREE.AdditiveBlending}
         />
       </points>
+      
+      {/* Scan line during intro phase */}
+      <group>
+        {/* Main scan line */}
+        <mesh ref={scanLineRef} position={[-3, 0, 0.2]}>
+          <planeGeometry args={[0.12, 4]} />
+          <meshBasicMaterial
+            color={colors.scanLight}
+            transparent
+            opacity={0.7}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+        
+        {/* Scan line glow halo */}
+        <mesh ref={scanLineRef} position={[-3, 0, 0.1]}>
+          <planeGeometry args={[0.5, 4.5]} />
+          <meshBasicMaterial
+            color={colors.scanLight}
+            transparent
+            opacity={0.15}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      </group>
     </>
   )
 }
