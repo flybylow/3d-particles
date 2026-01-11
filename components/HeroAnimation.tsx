@@ -144,6 +144,19 @@ export function HeroAnimation({
     return positionSets.barcode.slice()
   }, [positionSets])
   
+  // Bar count constant (matches generateBarcodePositions)
+  const BAR_COUNT = 25
+  
+  // Map particles to their bar index (for per-bar scaling animation)
+  const barcodeBarIndices = useMemo(() => {
+    const indices: number[] = []
+    const pointsPerBar = Math.floor(pointCount / BAR_COUNT)
+    for (let i = 0; i < pointCount; i++) {
+      indices.push(Math.min(Math.floor(i / pointsPerBar), BAR_COUNT - 1))
+    }
+    return indices
+  }, [pointCount])
+  
   // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
   // Flow: Chaos background → "Scan any product" → Rapid product cycling
   const timeline = {
@@ -177,7 +190,7 @@ export function HeroAnimation({
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
-    // Update scan line position during intro phase and barcode opacity
+    // Update scan line position during intro phase and barcode bar scaling
     let scanLineX = 0
     if (phase === 'intro' && scanLineRef.current) {
       const morphStartTime = timeline.intro - 1.2
@@ -188,16 +201,65 @@ export function HeroAnimation({
         scanLineRef.current.position.x = scanLineX
         scanLineRef.current.visible = true
         
-        // Fade out barcode as scan line passes (barcode fades out from left to right)
-        if (barcodeMaterialRef.current) {
-          // Barcode starts at opacity 1, fades to 0 as scan progresses
-          const fadeProgress = Math.min(scanProgress, 1) // 0 to 1
-          barcodeMaterialRef.current.opacity = 0.92 * (1 - fadeProgress)
+        // Calculate barcode dimensions for bar mapping
+        const barcodeWidth = 2.4
+        const barcodeBarWidth = barcodeWidth / BAR_COUNT
+        const barcodeLeft = -barcodeWidth / 2
+        
+        // Scale bars as scan line passes (bars grow one-by-one by expanding positions)
+        if (barcodePointsRef.current && barcodeMaterialRef.current) {
+          const barcodeGeometry = barcodePointsRef.current.geometry
+          const barcodePosArray = barcodeGeometry.attributes.position.array as Float32Array
+          
+          // Store original positions if not already stored
+          if (!barcodeGeometry.userData.originalPositions) {
+            barcodeGeometry.userData.originalPositions = new Float32Array(barcodePositions)
+          }
+          const originalPositions = barcodeGeometry.userData.originalPositions
+          
+          // Update positions to scale bars as scan line passes
+          for (let i = 0; i < pointCount; i++) {
+            const barIndex = barcodeBarIndices[i]
+            const barLeft = barcodeLeft + (barIndex * barcodeBarWidth)
+            const barRight = barLeft + barcodeBarWidth
+            const barCenter = (barLeft + barRight) / 2
+            
+            // Distance from scan line to bar center
+            const distFromScan = Math.abs(scanLineX - barCenter)
+            const barWidth = barcodeBarWidth
+            
+            // Grow bar when scan line is near (expand horizontally)
+            if (distFromScan < barWidth * 2.0) {
+              // Scale factor: max when scan line is at bar center, falls off with distance
+              const scaleFactor = 1.0 - (distFromScan / (barWidth * 2.0))
+              const scale = 1.0 + (scaleFactor * 2.0) // Grow up to 3x width
+              
+              // Scale particle X position around bar center
+              const origX = originalPositions[i * 3]
+              const offsetX = origX - barCenter
+              barcodePosArray[i * 3] = barCenter + offsetX * scale
+              
+              // Also scale Y slightly for vertical growth effect
+              const origY = originalPositions[i * 3 + 1]
+              barcodePosArray[i * 3 + 1] = origY * (1.0 + scaleFactor * 0.5)
+            } else {
+              // Reset to original position
+              barcodePosArray[i * 3] = originalPositions[i * 3]
+              barcodePosArray[i * 3 + 1] = originalPositions[i * 3 + 1]
+            }
+            // Z stays the same
+            barcodePosArray[i * 3 + 2] = originalPositions[i * 3 + 2]
+          }
+          
+          barcodeGeometry.attributes.position.needsUpdate = true
+          
+          // Keep barcode visible during scaling
+          barcodeMaterialRef.current.opacity = 0.92
         }
       } else {
         // Hide scan line when morphing to product
         scanLineRef.current.visible = false
-        // Fully fade out barcode
+        // Hide barcode
         if (barcodeMaterialRef.current) {
           barcodeMaterialRef.current.opacity = 0
         }
