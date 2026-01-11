@@ -42,17 +42,17 @@ function generateScatterPositions(pointCount: number, spread: number = 2.5): Flo
 function generateBarcodePositions(pointCount: number): Float32Array {
   const positions: number[] = []
   
-  // Barcode dimensions (centered at origin)
-  const width = 1.8 // Total width
-  const height = 0.9 // Total height
-  const barCount = 30 // Number of vertical bars
+  // Barcode dimensions (centered at origin) - larger and clearer
+  const width = 2.4 // Increased total width for better visibility
+  const height = 1.2 // Increased height for better proportions
+  const barCount = 25 // Fewer bars for cleaner look (was 30)
   const baseBarWidth = width / barCount
   
   // Simple alternating pattern - thin/thick bars like real barcode
   const barWidths: number[] = []
   for (let i = 0; i < barCount; i++) {
-    // Alternate between thin (1x) and thick (1.5x) bars
-    const barWidth = (i % 3 === 0) ? baseBarWidth * 1.5 : baseBarWidth * 1.0
+    // More distinct pattern: thin (1x) and thick (2x) bars
+    const barWidth = (i % 3 === 0) ? baseBarWidth * 2.0 : baseBarWidth * 1.0
     barWidths.push(barWidth)
   }
   
@@ -60,16 +60,18 @@ function generateBarcodePositions(pointCount: number): Float32Array {
   const totalWidth = barWidths.reduce((sum, w) => sum + w, 0)
   let currentX = -totalWidth / 2
   
-  // Distribute points across bars
+  // Distribute points across bars - tighter distribution for sharper bars
   for (let barIndex = 0; barIndex < barCount; barIndex++) {
     const barWidth = barWidths[barIndex]
     const barX = currentX + barWidth / 2
     const pointsPerBar = Math.floor(pointCount / barCount)
     
-    // Create clean, uniform bars
+    // Create clean, uniform bars with tighter distribution
     for (let i = 0; i < pointsPerBar; i++) {
-      const x = barX + (Math.random() - 0.5) * barWidth * 0.8
-      const y = (Math.random() - 0.5) * height * 0.9
+      // Tighter X distribution (0.6 instead of 0.8) for sharper bars
+      const x = barX + (Math.random() - 0.5) * barWidth * 0.6
+      // Full height coverage
+      const y = (Math.random() - 0.5) * height * 0.95
       const z = 0 // Flat barcode
       
       positions.push(x, y, z)
@@ -84,8 +86,8 @@ function generateBarcodePositions(pointCount: number): Float32Array {
     const barWidth = barWidths[barIndex]
     const barX = -totalWidth / 2 + barWidths.slice(0, barIndex).reduce((sum, w) => sum + w, 0) + barWidth / 2
     
-    const x = barX + (Math.random() - 0.5) * barWidth * 0.8
-    const y = (Math.random() - 0.5) * height * 0.9
+    const x = barX + (Math.random() - 0.5) * barWidth * 0.6
+    const y = (Math.random() - 0.5) * height * 0.95
     const z = 0
     
     positions.push(x, y, z)
