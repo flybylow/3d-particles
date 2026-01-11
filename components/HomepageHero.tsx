@@ -42,7 +42,7 @@ preloadTShirt()
 // Copy: "Scan any product." → Product labels (check, check, check!)
 const PHASES = {
   intro: {
-    headline: 'Scan any product.', // 0-2.5s: Intro with chaos background
+    headline: 'Scan any product.', // 0-4.0s: Intro with chaos drifting, then zoom
     subline: ''
   },
   cycling: {

@@ -80,7 +80,7 @@ export function HeroAnimation({
   // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
   // Flow: Chaos background → "Scan any product" → Rapid product cycling
   const timeline = {
-    intro: 3.5,              // 0-3.5s: Intro with chaos, text appears
+    intro: 4.0,              // 0-4.0s: Intro with chaos drifting, text appears
     productDuration: 2.5,    // Time to show each product (transform + display)
     transformDuration: 1.0   // Time to morph between products
   }
@@ -120,23 +120,25 @@ export function HeroAnimation({
     
     switch (phase) {
       case 'intro':
-        // Intro: Chaos background, then start morphing to first product
-        const morphStartTime = timeline.intro - 1.2 // Start morphing 1.2s before end
+        // Intro: Pure chaos particles drifting, then zoom into first product
+        const chaosDuration = 3.0 // 3 seconds of pure chaos
+        const zoomDuration = 1.0  // 1 second to zoom/morph into product
         
-        if (elapsed < morphStartTime) {
-          // Pure chaos phase
+        if (elapsed < chaosDuration) {
+          // Pure chaos phase - particles drifting around
           target = positionSets.scatter
           progress = 1
           particleColor = colors.chaosWarm
           
-          // Gentle floating movement
+          // Continuous gentle rotation and drift
           if (pointsRef.current) {
-            pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.05
+            pointsRef.current.rotation.y = state.clock.elapsedTime * 0.1
+            pointsRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.3) * 0.05
           }
         } else {
-          // Morphing from chaos to first product
-          const morphElapsed = elapsed - morphStartTime
-          const morphProgress = easeInOutCubic(Math.min(morphElapsed / 1.2, 1))
+          // Zoom/morph from chaos into first product
+          const morphElapsed = elapsed - chaosDuration
+          const morphProgress = easeInOutCubic(Math.min(morphElapsed / zoomDuration, 1))
           
           target = positionSets.products[0]
           progress = morphProgress
@@ -145,7 +147,7 @@ export function HeroAnimation({
             colors.offWhite,
             morphProgress
           )
-          shouldRotate = morphProgress > 0.5 // Start rotating when halfway morphed
+          shouldRotate = true // Rotate during zoom
         }
         
         if (elapsed > timeline.intro) {
@@ -226,6 +228,13 @@ export function HeroAnimation({
         // Apply vertical offset for product phases (Y coordinate)
         if (j === 1 && phase === 'cycling') {
           targetValue += productYOffset
+        }
+        
+        // Add gentle drift to chaos particles during intro
+        if (phase === 'intro' && elapsed < 3.0) {
+          const driftSpeed = 0.3
+          const driftAmount = Math.sin(state.clock.elapsedTime * driftSpeed + pointIndex * 0.1) * 0.02
+          targetValue += driftAmount
         }
         
         positions[idx] = THREE.MathUtils.lerp(
