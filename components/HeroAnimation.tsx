@@ -152,16 +152,16 @@ export function HeroAnimation({
     return { barcode, scatter, products: productPositions }
   }, [pointCount, products, wineBottle, battery])
   
-  // Timeline configuration (in seconds) - Persuasion Sequence
-  // Based on behavioral psychology: Anxiety → Relief → Delight
+  // Timeline configuration (in seconds) - NEW SPEC: Electric Awakening
+  // Copy Rhythm: "Scan." → "Any product." → "Verify." → "Trusted."
   const timeline = {
-    chaos: 2.5,          // ACT 1: Chaos + failed scans (0-2.5s)
-    failedScan: 0.8,     // Failed scan attempt (2.5-3.3s, repeats 2-3x)
-    scanning: 3.0,       // ACT 2: THE SCAN - light sweeps, particles align (4-7s)
-    barcode: 1.5,        // Barcode holds (7-8.5s)
-    holding: 1.0,        // Hold + verify moment (8.5-9.5s) ⚠️ CRITICAL
-    transforming: 1.5,   // Product transformation (9.5-11s)
-    product: 1.5         // ACT 3: Verified state (11-12.5s)
+    chaos: 2.0,          // 0-2s: "Scan." - Command with chaos
+    failedScan: 2.0,     // 2-4s: "Any product." - Scope, failed scanning
+    scanning: 4.0,       // 4-8s: THE AWAKENING - Lightning strikes, chain reaction, barcode forms
+    barcode: 0.0,        // Merged into scanning phase
+    holding: 1.5,        // 8-9.5s: "Verify." - Process confirmed ⚠️ CRITICAL
+    transforming: 2.0,   // 9.5-11.5s: Product transformation
+    product: 1.5         // 11.5-13s: "Trusted." - Outcome, resolution
   }
   
   // Color states for emotional journey

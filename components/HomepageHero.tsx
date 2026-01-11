@@ -32,33 +32,34 @@ preloadWineBottle()
 preloadBattery()
 
 // Persuasion Sequence: Anxiety → Relief → Delight
+// Copy Rhythm: "Scan." → "Any product." → "Verify." → "Trusted."
 const PHASES = {
   chaos: {
-    headline: '', // Let the confusion speak
+    headline: 'Scan.', // 0s - The command
     subline: ''
   },
   failedScan: {
-    headline: '', // Failed scanning - no text yet
+    headline: 'Any product.', // 2s - The scope (over chaos)
     subline: ''
   },
   scanning: {
-    headline: '', // The scan is happening - tension building
+    headline: 'Any product.', // Maintain during lightning awakening
     subline: ''
   },
   barcode: {
-    headline: '', // Barcode formed - brief hold before text
+    headline: '', // Formation - let visuals speak
     subline: ''
   },
   holding: {
-    headline: 'One scan.', // ⚠️ CRITICAL: Recognition moment
+    headline: 'Verify.', // 8s - Process confirmed
     subline: ''
   },
   transforming: {
-    headline: 'One scan.', // Maintain during transformation
+    headline: 'Verify.', // Maintain during transformation
     subline: ''
   },
   product: {
-    headline: 'Verify.', // Success state
+    headline: 'Trusted.', // 11.5s - Outcome, resolution
     subline: ''
   }
 }
@@ -66,14 +67,31 @@ const PHASES = {
 export function HomepageHero() {
   const [phase, setPhase] = useState('chaos')
   const [currentProduct, setCurrentProduct] = useState(PRODUCTS[0])
+  const [productCycle, setProductCycle] = useState(0) // Track which cycle we're on
   const [showText, setShowText] = useState(true) // Start with text visible
   
   const handlePhaseChange = (newPhase: string, productIndex: number) => {
     setPhase(newPhase)
     setCurrentProduct(PRODUCTS[productIndex])
     
+    // Track product cycles
+    if (newPhase === 'product' && productIndex !== 0) {
+      setProductCycle(prev => prev + 1)
+    } else if (newPhase === 'chaos' && productIndex === 0) {
+      setProductCycle(0) // Reset on loop back to first product
+    }
+    
     // Text is always visible, content changes based on phase
     setShowText(true)
+  }
+  
+  // Get the appropriate copy based on phase and cycle
+  const getCurrentHeadline = () => {
+    if (phase === 'product' && productCycle > 0) {
+      // Alternate text for subsequent products
+      return 'Verified.'
+    }
+    return PHASES[phase as keyof typeof PHASES]?.headline || ''
   }
   
   return (
@@ -100,7 +118,7 @@ export function HomepageHero() {
       
       {/* Text Overlay - Three Act Narrative */}
       <div className={`hero-text ${showText ? 'visible' : ''}`}>
-        <h1>{PHASES[phase as keyof typeof PHASES]?.headline || 'Know your product.'}</h1>
+        <h1>{getCurrentHeadline()}</h1>
       </div>
       
       {/* Product Label - Only show in product phase */}
