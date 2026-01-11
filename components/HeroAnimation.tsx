@@ -113,9 +113,6 @@ function generateBarcodePositions(pointCount: number): Float32Array {
   return new Float32Array(positions.slice(0, pointCount * 3))
 }
 
-// Store bar indices for explosion animation (global for now, will move to component)
-let barcodeBarIndices: number[] = []
-
 // Easing function for smoother animation
 function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
