@@ -5,6 +5,7 @@ import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
 import { useTShirtPositions } from './TShirtGeometry'
+import { ElectricScanMaterial } from './ElectricScanShader'
 
 interface Product {
   name: string
@@ -112,6 +113,7 @@ export function HeroAnimation({
   const barcodePointsRef = useRef<THREE.Points>(null) // Barcode particles (foreground, on top)
   const barcodeMaterialRef = useRef<THREE.PointsMaterial>(null)
   const scanLineRef = useRef<THREE.Group>(null)
+  const scanMaterialRef = useRef<InstanceType<typeof ElectricScanMaterial>>(null)
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
   const [phase, setPhase] = useState<'intro' | 'cycling'>('intro')
   const phaseStartTime = useRef(0)
@@ -200,6 +202,12 @@ export function HeroAnimation({
         scanLineX = -3 + (scanProgress * 6) // Sweep from -3 to 3
         scanLineRef.current.position.x = scanLineX
         scanLineRef.current.visible = true
+        
+        // Update shader uniforms for electric effect
+        if (scanMaterialRef.current) {
+          scanMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime
+          scanMaterialRef.current.uniforms.uIntensity.value = 1.0
+        }
         
         // Calculate barcode dimensions for bar mapping
         const barcodeWidth = 2.4
@@ -488,26 +496,13 @@ export function HeroAnimation({
       
       {/* Scan line during intro phase */}
       <group ref={scanLineRef}>
-        {/* Main scan line */}
+        {/* Main electric scan line */}
         <mesh position={[0, 0, 0.2]}>
-          <planeGeometry args={[0.12, 4]} />
-          <meshBasicMaterial
-            color={colors.scanLight}
+          <planeGeometry args={[0.15, 4]} />
+          <primitive
+            object={new ElectricScanMaterial()}
+            ref={scanMaterialRef}
             transparent
-            opacity={0.7}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-        
-        {/* Scan line glow halo */}
-        <mesh position={[0, 0, 0.1]}>
-          <planeGeometry args={[0.5, 4.5]} />
-          <meshBasicMaterial
-            color={colors.scanLight}
-            transparent
-            opacity={0.15}
             blending={THREE.AdditiveBlending}
             depthWrite={false}
             side={THREE.DoubleSide}
