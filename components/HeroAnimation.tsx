@@ -105,8 +105,10 @@ export function HeroAnimation({
   pointSize = 0.008,
   onPhaseChange
 }: HeroAnimationProps) {
-  const pointsRef = useRef<THREE.Points>(null)
+  const pointsRef = useRef<THREE.Points>(null) // Chaos particles (background)
   const materialRef = useRef<THREE.PointsMaterial>(null)
+  const barcodePointsRef = useRef<THREE.Points>(null) // Barcode particles (foreground, on top)
+  const barcodeMaterialRef = useRef<THREE.PointsMaterial>(null)
   const scanLineRef = useRef<THREE.Group>(null)
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
   const [phase, setPhase] = useState<'intro' | 'cycling'>('intro')
