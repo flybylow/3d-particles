@@ -31,26 +31,34 @@ const PRODUCTS: Product[] = [
 preloadWineBottle()
 preloadBattery()
 
-// Three Act Narrative Structure
+// Persuasion Sequence: Anxiety → Relief → Delight
 const PHASES = {
   chaos: {
-    headline: 'too much product info',
+    headline: '', // Let the confusion speak
     subline: ''
   },
-  coalescing: {
-    headline: 'too much product info',
+  failedScan: {
+    headline: '', // Failed scanning - no text yet
+    subline: ''
+  },
+  scanning: {
+    headline: '', // The scan is happening - tension building
     subline: ''
   },
   barcode: {
-    headline: 'One scan.',
+    headline: '', // Barcode formed - brief hold before text
+    subline: ''
+  },
+  holding: {
+    headline: 'One scan.', // ⚠️ CRITICAL: Recognition moment
     subline: ''
   },
   transforming: {
-    headline: 'One scan.',
+    headline: 'One scan.', // Maintain during transformation
     subline: ''
   },
   product: {
-    headline: 'Know your product.',
+    headline: 'Verify.', // Success state
     subline: ''
   }
 }

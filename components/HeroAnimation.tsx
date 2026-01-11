@@ -108,10 +108,12 @@ export function HeroAnimation({
 }: HeroAnimationProps) {
   const pointsRef = useRef<THREE.Points>(null)
   const materialRef = useRef<THREE.PointsMaterial>(null)
+  const scanLightRef = useRef<THREE.Mesh>(null)
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
-  const [phase, setPhase] = useState<'chaos' | 'coalescing' | 'barcode' | 'transforming' | 'product'>('chaos')
+  const [phase, setPhase] = useState<'chaos' | 'failedScan' | 'scanning' | 'barcode' | 'holding' | 'transforming' | 'product'>('chaos')
   const phaseStartTime = useRef(0)
   const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
+  const failedScanCount = useRef(0) // Track failed scan attempts
   const { clock } = useThree()
   
   // Load both product models
@@ -132,13 +134,24 @@ export function HeroAnimation({
     return { barcode, scatter, products: productPositions }
   }, [pointCount, products, wineBottle, battery])
   
-  // Timeline configuration (in seconds) - Three Act Structure
+  // Timeline configuration (in seconds) - Persuasion Sequence
+  // Based on behavioral psychology: Anxiety → Relief → Delight
   const timeline = {
-    chaos: 3.0,          // ACT 1: Particle storm (0-3s)
-    coalescing: 2.0,     // Particles gravitate and pull together (3-5s)
-    barcode: 2.0,        // ACT 2: Barcode formation complete (5-7s)
-    transforming: 2.0,   // Barcode transforms to product (7-9s)
-    product: 5.0         // ACT 3: Product reveal with text (9-14s) - longer rotation
+    chaos: 2.5,          // ACT 1: Chaos + failed scans (0-2.5s)
+    failedScan: 0.8,     // Failed scan attempt (2.5-3.3s, repeats 2-3x)
+    scanning: 3.0,       // ACT 2: THE SCAN - light sweeps, particles align (4-7s)
+    barcode: 1.5,        // Barcode holds (7-8.5s)
+    holding: 1.0,        // Hold + verify moment (8.5-9.5s) ⚠️ CRITICAL
+    transforming: 1.5,   // Product transformation (9.5-11s)
+    product: 1.5         // ACT 3: Verified state (11-12.5s)
+  }
+  
+  // Color states for emotional journey
+  const colors = {
+    chaosWarm: new THREE.Color(0xFF6B35),      // Warm amber (error state)
+    scanLight: new THREE.Color(0x4CC9F0),      // Blue-white (scanning)
+    verifiedCool: new THREE.Color(0x88927D),   // Sage green (success)
+    offWhite: new THREE.Color(0xF8F8F7)        // Clean white
   }
   
   // Initialize positions - Start with CHAOS
@@ -158,52 +171,104 @@ export function HeroAnimation({
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
-    // THREE ACT STRUCTURE: Chaos → Clarity → Revelation
+    // PERSUASION SEQUENCE: Anxiety → Relief → Delight
     let target: Float32Array
     let progress = 0
     let shouldRotate = false
+    let particleColor = colors.offWhite
+    let scanLightPosition = -3 // Off-screen left
+    let scanLightVisible = false
     
     switch (phase) {
       case 'chaos':
-        // ACT 1: Particle storm - gentle drift
+        // ACT 1: Chaos - warm error colors, jittery movement
         target = positionSets.scatter
         progress = Math.min(elapsed / 1.0, 1)
-        // Add subtle drift animation
+        particleColor = colors.chaosWarm
+        // Jittery rotation to suggest system failure
         if (pointsRef.current) {
-          pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.1) * 0.05
+          pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 2) * 0.08
         }
         if (elapsed > timeline.chaos) {
-          setPhase('coalescing')
-          onPhaseChange?.('coalescing', currentProductIndex)
+          failedScanCount.current = 0
+          setPhase('failedScan')
+          onPhaseChange?.('failedScan', currentProductIndex)
         }
         break
         
-      case 'coalescing':
-        // Particles gravitate toward barcode formation - accelerating
+      case 'failedScan':
+        // Failed scanning attempts (2-3 times)
+        target = positionSets.scatter
+        progress = 1
+        particleColor = colors.chaosWarm
+        scanLightVisible = true
+        // Scan line passes but doesn't align particles
+        const scanProgress = (elapsed % timeline.failedScan) / timeline.failedScan
+        scanLightPosition = -2 + (scanProgress * 4) // Sweep across
+        
+        if (elapsed > timeline.failedScan) {
+          failedScanCount.current++
+          if (failedScanCount.current >= 2) {
+            // After 2 failed scans, move to successful scan
+            setPhase('scanning')
+            onPhaseChange?.('scanning', currentProductIndex)
+          } else {
+            // Reset for another failed scan attempt
+            phaseStartTime.current = clock.elapsedTime
+          }
+        }
+        break
+        
+      case 'scanning':
+        // ACT 2: THE SCAN - light sweeps, particles RESPOND and align
         target = positionSets.barcode
-        // Use power easing for acceleration effect
-        const t = Math.min(elapsed / timeline.coalescing, 1)
-        progress = t * t * t // Cubic easing for acceleration
-        if (elapsed > timeline.coalescing) {
+        scanLightVisible = true
+        const scanT = Math.min(elapsed / timeline.scanning, 1)
+        scanLightPosition = -2 + (scanT * 4) // Sweep left to right
+        progress = scanT // Particles align as light passes
+        // Color transition from warm to cool
+        particleColor = new THREE.Color().lerpColors(colors.chaosWarm, colors.scanLight, scanT)
+        
+        if (elapsed > timeline.scanning) {
           setPhase('barcode')
           onPhaseChange?.('barcode', currentProductIndex)
         }
         break
         
       case 'barcode':
-        // ACT 2: Clean barcode - breathing room
+        // Barcode formed, brief hold before verification moment
         target = positionSets.barcode
         progress = 1
+        particleColor = colors.scanLight
         if (elapsed > timeline.barcode) {
+          setPhase('holding')
+          onPhaseChange?.('holding', currentProductIndex)
+        }
+        break
+        
+      case 'holding':
+        // ⚠️ CRITICAL: Hold + verify moment - "One scan." appears
+        target = positionSets.barcode
+        progress = 1
+        particleColor = colors.verifiedCool
+        // Subtle pulse for verification
+        const pulseT = (elapsed / 2.0) * Math.PI * 2
+        const pulseScale = 1.0 + (Math.sin(pulseT) * 0.02)
+        if (pointsRef.current) {
+          pointsRef.current.scale.setScalar(pulseScale)
+        }
+        if (elapsed > timeline.holding) {
+          if (pointsRef.current) pointsRef.current.scale.setScalar(1.0)
           setPhase('transforming')
           onPhaseChange?.('transforming', currentProductIndex)
         }
         break
         
       case 'transforming':
-        // Barcode explodes/morphs into product
+        // Product transformation - barcode → product
         target = positionSets.products[currentProductIndex]
         progress = easeInOutCubic(Math.min(elapsed / timeline.transforming, 1))
+        particleColor = colors.verifiedCool
         if (elapsed > timeline.transforming) {
           setPhase('product')
           onPhaseChange?.('product', currentProductIndex)
@@ -211,20 +276,19 @@ export function HeroAnimation({
         break
         
       case 'product':
-        // ACT 3: Product reveal with gentle rotation
+        // ACT 3: Verified state - cool colors, stable
         target = positionSets.products[currentProductIndex]
         progress = 1
         shouldRotate = true
+        particleColor = colors.offWhite
         if (elapsed > timeline.product) {
-          // If there's another product, morph directly to it
+          // Cycle to next product or loop
           const nextProductIndex = (currentProductIndex + 1) % products.length
           if (nextProductIndex !== 0) {
-            // Morph to next product directly
             setCurrentProductIndex(nextProductIndex)
             setPhase('transforming')
             onPhaseChange?.('transforming', nextProductIndex)
           } else {
-            // Loop back to chaos for first product
             setCurrentProductIndex(0)
             setPhase('chaos')
             onPhaseChange?.('chaos', 0)
@@ -235,6 +299,17 @@ export function HeroAnimation({
       default:
         target = positionSets.scatter
         progress = 1
+    }
+    
+    // Update particle color
+    if (materialRef.current) {
+      materialRef.current.color.lerp(particleColor, delta * 3)
+    }
+    
+    // Update scan light position and visibility
+    if (scanLightRef.current) {
+      scanLightRef.current.visible = scanLightVisible
+      scanLightRef.current.position.x = scanLightPosition
     }
     
     // Interpolate positions with staggered timing
@@ -293,26 +368,41 @@ export function HeroAnimation({
   })
   
   return (
-    <points ref={pointsRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          array={currentPositions}
-          count={pointCount}
-          itemSize={3}
+    <>
+      {/* Particle system */}
+      <points ref={pointsRef}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            array={currentPositions}
+            count={pointCount}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
+          ref={materialRef}
+          size={pointSize}
+          color="#F8F8F7"
+          sizeAttenuation
+          transparent
+          opacity={0.92}
+          depthWrite={false}
+          blending={THREE.AdditiveBlending}
         />
-      </bufferGeometry>
-      <pointsMaterial
-        ref={materialRef}
-        size={pointSize}
-        color="#F8F8F7"
-        sizeAttenuation
-        transparent
-        opacity={0.92}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
+      </points>
+      
+      {/* Scan light - THE HERO MOMENT */}
+      <mesh ref={scanLightRef} visible={false}>
+        <planeGeometry args={[0.2, 3]} />
+        <meshBasicMaterial
+          color={colors.scanLight}
+          transparent
+          opacity={0.6}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+    </>
   )
 }
 
