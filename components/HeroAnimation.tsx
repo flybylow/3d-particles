@@ -146,6 +146,9 @@ export function HeroAnimation({
     return positionSets.barcode.slice()
   }, [positionSets])
   
+  // Create electric scan material instance (once)
+  const electricScanMaterial = useMemo(() => new ElectricScanMaterial(), [])
+  
   // Bar count constant (matches generateBarcodePositions)
   const BAR_COUNT = 25
   
@@ -499,14 +502,7 @@ export function HeroAnimation({
         {/* Main electric scan line */}
         <mesh position={[0, 0, 0.2]}>
           <planeGeometry args={[0.15, 4]} />
-          <primitive
-            object={new ElectricScanMaterial()}
-            ref={scanMaterialRef}
-            transparent
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
+          <primitive object={electricScanMaterial} ref={scanMaterialRef} />
         </mesh>
       </group>
     </>
