@@ -100,7 +100,12 @@ export function HomepageHero() {
       
       {/* Bottom tagline - Always visible */}
       <div className={`hero-tagline visible`}>
-        <p>Digital Product Passports for the EU economy</p>
+        <p>Digital Product Passports</p>
+      </div>
+      
+      {/* EU Economy Stamp - Show during cycling phase (third step) */}
+      <div className={`eu-stamp ${phase === 'cycling' ? 'visible' : ''}`}>
+        <span>for the EU economy</span>
       </div>
       
       {/* Scroll indicator */}
