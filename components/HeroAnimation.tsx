@@ -232,7 +232,7 @@ export function HeroAnimation({
     
     // Interpolate positions with staggered timing
     // Apply uniform Y offset for products (all objects centered at origin by default)
-    const productYOffset = -1.0 // Vertical position adjustment for larger products (moved up from -1.2)
+    const productYOffset = -0.5 // Vertical position adjustment for larger products (moved up from -1.2 to -1.0 to -0.5)
     
     for (let i = 0; i < positions.length; i += 3) {
       const pointIndex = i / 3
@@ -273,7 +273,7 @@ export function HeroAnimation({
       
       const cos = Math.cos(rotationAngle.current)
       const sin = Math.sin(rotationAngle.current)
-      const productYOffset = -1.0 // Same offset as above for consistency
+      const productYOffset = -0.5 // Same offset as above for consistency
       
       // Apply rotation to target positions (not accumulated positions)
       for (let i = 0; i < positions.length; i += 3) {
