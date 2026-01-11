@@ -128,20 +128,7 @@ export function HeroAnimation({
   const materialRef = useRef<THREE.PointsMaterial>(null)
   const barcodePointsRef = useRef<THREE.Points>(null) // Barcode particles (foreground, already formed)
   const barcodeMaterialRef = useRef<THREE.PointsMaterial>(null)
-  const scanLineRef = useRef<THREE.Mesh>(null)
-  const scanMaterialRef = useRef<THREE.ShaderMaterial>(null)
-  
-  // Create shader material uniforms
-  const scanUniforms = useMemo(
-    () => ({
-      uTime: { value: 0 },
-      uIntensity: { value: 1.0 },
-      uColorCore: { value: new THREE.Color(0xFFFFFF) },
-      uColorEdge: { value: new THREE.Color(0x4CC9F0) },
-      uWidth: { value: 0.3 }
-    }),
-    []
-  )
+  const scanLineRef = useRef<THREE.Group>(null)
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
   const [phase, setPhase] = useState<'intro' | 'barcode' | 'exploding' | 'cycling'>('intro')
   const phaseStartTime = useRef(0)
