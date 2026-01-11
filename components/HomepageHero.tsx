@@ -5,6 +5,7 @@ import { Canvas } from '@react-three/fiber'
 import { HeroAnimation } from './HeroAnimation'
 import { preloadWineBottle } from './WineBottleGeometry'
 import { preloadBattery } from './BatteryGeometry'
+import { preloadTShirt } from './TShirtGeometry'
 import './HomepageHero.css'
 
 interface Product {
@@ -13,7 +14,7 @@ interface Product {
   category: string
 }
 
-// Two products: wine bottle and battery
+// Three products: wine bottle, battery, and t-shirt
 const PRODUCTS: Product[] = [
   {
     name: 'Wine Bottle',
@@ -24,12 +25,18 @@ const PRODUCTS: Product[] = [
     name: '12V Battery',
     modelPath: '/models/batt2.gltf',
     category: 'Automotive'
+  },
+  {
+    name: 'T-Shirt',
+    modelPath: '/models/scene.gltf',
+    category: 'Fashion & Apparel'
   }
 ]
 
 // Preload all models
 preloadWineBottle()
 preloadBattery()
+preloadTShirt()
 
 // NEW FLOW: Chaos background → Rapid product cycling
 // Copy: "Scan any product." → Product labels (check, check, check!)

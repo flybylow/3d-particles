@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
+import { useTShirtPositions } from './TShirtGeometry'
 
 interface Product {
   name: string
@@ -60,19 +61,21 @@ export function HeroAnimation({
   // Load all product models
   const wineBottle = useWineBottlePositions(pointCount)
   const battery = useBatteryPositions(pointCount)
+  const tshirt = useTShirtPositions(pointCount)
   
   // Generate all position sets
   const positionSets = useMemo(() => {
     const scatter = generateScatterPositions(pointCount)
-    // Map products: wine bottle first, then battery
+    // Map products: wine bottle first, then battery, then t-shirt
     const productPositions = products.map((product, index) => {
       if (index === 0) return wineBottle
       if (index === 1) return battery
+      if (index === 2) return tshirt
       return wineBottle // fallback
     })
     
     return { scatter, products: productPositions }
-  }, [pointCount, products, wineBottle, battery])
+  }, [pointCount, products, wineBottle, battery, tshirt])
   
   // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
   // Flow: Chaos background → "Scan any product" → Rapid product cycling
@@ -121,14 +124,15 @@ export function HeroAnimation({
         const morphStartTime = timeline.intro - 1.2 // Start morphing 1.2s before end
         
         if (elapsed < morphStartTime) {
-          // Pure chaos phase
+          // Pure chaos phase - nervous/jittery particles
           target = positionSets.scatter
           progress = 1
           particleColor = colors.chaosWarm
           
-          // Gentle floating movement
+          // Continuous rotation and drift for nervous movement
           if (pointsRef.current) {
-            pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.05
+            pointsRef.current.rotation.y = state.clock.elapsedTime * 0.1
+            pointsRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.3) * 0.05
           }
         } else {
           // Morphing from chaos to first product
@@ -223,6 +227,13 @@ export function HeroAnimation({
         // Apply vertical offset for product phases (Y coordinate)
         if (j === 1 && phase === 'cycling') {
           targetValue += productYOffset
+        }
+        
+        // Add nervous/jittery drift to particles during intro chaos phase
+        if (phase === 'intro' && elapsed < timeline.intro - 1.2) {
+          const driftSpeed = 0.5 + (pointIndex % 3) * 0.2 // Vary speed per particle
+          const driftAmount = Math.sin(state.clock.elapsedTime * driftSpeed + pointIndex * 0.1) * 0.03
+          targetValue += driftAmount
         }
         
         positions[idx] = THREE.MathUtils.lerp(
