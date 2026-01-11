@@ -76,7 +76,7 @@ export function HomepageHero() {
             <HeroAnimation
               products={PRODUCTS}
               pointCount={20000}
-              pointSize={0.006}
+              pointSize={0.012}
               onPhaseChange={handlePhaseChange}
             />
           </Suspense>

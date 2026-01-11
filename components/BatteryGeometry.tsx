@@ -6,11 +6,11 @@ import { useMemo } from 'react'
 export function generateBatteryPositions(pointCount: number): Float32Array {
   const positions: number[] = []
   
-  // Battery dimensions (standing upright, cylindrical)
+  // Battery dimensions (standing upright, cylindrical) - SCALED UP TO FILL SCREEN
   const batteryCount = 3
-  const batteryRadius = 0.12  // Radius for cylindrical batteries
-  const batteryHeight = 0.8
-  const spacing = 0.08
+  const batteryRadius = 0.35  // Radius for cylindrical batteries (3x larger)
+  const batteryHeight = 2.4   // Height (3x larger)
+  const spacing = 0.25        // Spacing between batteries (3x larger)
   const totalWidth = (batteryRadius * 2 * batteryCount) + (spacing * (batteryCount - 1))
   
   // Points distribution

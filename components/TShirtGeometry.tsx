@@ -52,8 +52,8 @@ export function useTShirtPositions(count: number) {
     boundingBox.getSize(size)
     const maxDimension = Math.max(size.x, size.y, size.z)
     
-    // Target size (similar to wine bottle and battery)
-    const targetSize = 1.2
+    // Target size - SCALED UP TO FILL SCREEN
+    const targetSize = 3.5
     const scale = targetSize / maxDimension
     
     // Center and scale all positions

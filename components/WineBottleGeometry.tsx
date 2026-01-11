@@ -8,7 +8,7 @@ import { useMemo } from 'react'
  * @param pointCount - Number of particles to distribute across the model
  * @param scale - Scale factor to adjust model size (default 0.08 for good visibility)
  */
-export function useWineBottlePositions(pointCount: number, scale: number = 0.08): Float32Array {
+export function useWineBottlePositions(pointCount: number, scale: number = 0.5): Float32Array {
   const { scene } = useGLTF('/models/wine-bottle.gltf')
   
   return useMemo(() => {
