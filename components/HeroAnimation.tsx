@@ -153,13 +153,14 @@ export function HeroAnimation({
     offWhite: new THREE.Color(0xF8F8F7)        // Clean white
   }
   
-  // Camera positions (per spec)
+  // Camera positions (Three.js uses positive Z for camera distance)
+  // Per spec: WIDE (far) → PUSH IN → CLOSE → INTO (very close)
   const cameraPositions = {
-    wide: { z: -50, fov: 60 },
-    merge: { z: -30, fov: 50 },
-    barcode: { z: -15, fov: 45 },
-    product: { z: -10, fov: 40 },
-    portal: { z: 0, fov: 30 }
+    wide: { z: 20, fov: 60 },    // Far back for wide shot
+    merge: { z: 12, fov: 50 },   // Pushing in
+    barcode: { z: 8, fov: 45 },  // Closer
+    product: { z: 5, fov: 40 },  // Close
+    portal: { z: 2, fov: 30 }    // Very close (into product)
   }
   
   // Initialize positions
