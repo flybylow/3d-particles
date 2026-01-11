@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { HeroAnimation } from './HeroAnimation'
 import { preloadWineBottle } from './WineBottleGeometry'
@@ -38,35 +38,60 @@ preloadWineBottle()
 preloadBattery()
 preloadTShirt()
 
-// NEW FLOW: Chaos background → Rapid product cycling
-// Copy: "Scan any product." → Product labels (check, check, check!)
-const PHASES = {
-  intro: {
-    headline: 'Scan any product.', // 0-4.0s: Intro with chaos drifting, then zoom
-    subline: ''
-  },
-  cycling: {
-    headline: '', // Let product labels speak
-    subline: ''
-  }
-}
-
+// 5-Act Structure (per spec)
+// Copy timing:
+// "Scan." (0s) → "Any product." (1.5s) → "Verify." (5s) → "Trusted." (7.5s)
 export function HomepageHero() {
-  const [phase, setPhase] = useState('intro')
-  const [currentProduct, setCurrentProduct] = useState(PRODUCTS[0])
-  const [showText, setShowText] = useState(true) // Start with text visible
+  const [phase, setPhase] = useState('chaos')
+  const [headline, setHeadline] = useState('')
+  const [showHeadline, setShowHeadline] = useState(false)
   
   const handlePhaseChange = (newPhase: string, productIndex: number) => {
     setPhase(newPhase)
-    setCurrentProduct(PRODUCTS[productIndex])
+    
+    // Update headline based on phase (per spec timing)
+    switch (newPhase) {
+      case 'chaos':
+        setHeadline('Scan.')
+        setShowHeadline(true)
+        break
+      case 'barcode':
+        setHeadline('Verify.')
+        setShowHeadline(true)
+        break
+      case 'product':
+        setHeadline('Trusted.')
+        setShowHeadline(true)
+        break
+      case 'merge':
+      case 'portal':
+        setShowHeadline(false)
+        break
+      default:
+        setShowHeadline(false)
+    }
   }
+  
+  // Initial "Scan." text, then "Any product." at 1.5s (per spec)
+  useEffect(() => {
+    setHeadline('Scan.')
+    setShowHeadline(true)
+    
+    const timer1 = setTimeout(() => {
+      setHeadline('Any product.')
+    }, 1500)
+    
+    return () => {
+      clearTimeout(timer1)
+    }
+  }, [])
   
   return (
     <section className="homepage-hero">
       {/* 3D Canvas */}
       <div className="hero-canvas">
         <Canvas
-          camera={{ position: [0, 0, 5.5], fov: 50 }}
+          camera={{ position: [0, 0, -50], fov: 60 }}
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           dpr={[1, 2]}
         >
@@ -83,15 +108,9 @@ export function HomepageHero() {
         </Canvas>
       </div>
       
-      {/* Text Overlay - "Scan any product." */}
-      <div className={`hero-text ${phase === 'intro' ? 'visible' : ''}`}>
-        <h1>{PHASES[phase as keyof typeof PHASES]?.headline || ''}</h1>
-      </div>
-      
-      {/* Product Label - Show during rapid cycling (check, check, check!) */}
-      <div className={`product-label ${phase === 'cycling' ? 'visible' : ''}`}>
-        <span className="product-category">{currentProduct.category}</span>
-        <span className="product-name">{currentProduct.name}</span>
+      {/* Text Overlay - Per spec copy timing */}
+      <div className={`hero-text ${showHeadline ? 'visible' : ''}`}>
+        <h1>{headline}</h1>
       </div>
       
       {/* Bottom tagline - Always visible */}
@@ -106,4 +125,3 @@ export function HomepageHero() {
     </section>
   )
 }
-
