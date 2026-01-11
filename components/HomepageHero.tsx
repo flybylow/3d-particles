@@ -4,6 +4,7 @@ import { useState, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { HeroAnimation } from './HeroAnimation'
 import { preloadWineBottle } from './WineBottleGeometry'
+import { preloadBattery } from './BatteryGeometry'
 import './HomepageHero.css'
 
 interface Product {
@@ -12,17 +13,23 @@ interface Product {
   category: string
 }
 
-// Wine bottle for hero moment
+// Two products: wine bottle and battery
 const PRODUCTS: Product[] = [
   {
     name: 'Wine Bottle',
     modelPath: '/models/wine-bottle.gltf',
     category: 'Food & Beverage'
+  },
+  {
+    name: '12V Battery',
+    modelPath: '/models/batt2.gltf',
+    category: 'Automotive'
   }
 ]
 
-// Preload wine bottle model
+// Preload both models
 preloadWineBottle()
+preloadBattery()
 
 // Three Act Narrative Structure
 const PHASES = {

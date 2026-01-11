@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
+import { useBatteryPositions } from './BatteryGeometry'
 
 interface Product {
   name: string
@@ -101,17 +102,23 @@ export function HeroAnimation({
   const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
   const { clock } = useThree()
   
-  // Load wine bottle model positions
+  // Load both product models
   const wineBottle = useWineBottlePositions(pointCount)
+  const battery = useBatteryPositions(pointCount)
   
   // Generate all position sets
   const positionSets = useMemo(() => {
     const barcode = generateBarcodePositions(pointCount)
     const scatter = generateScatterPositions(pointCount)
-    const productPositions = products.map(() => wineBottle)
+    // Map products: wine bottle first, then battery
+    const productPositions = products.map((product, index) => {
+      if (index === 0) return wineBottle
+      if (index === 1) return battery
+      return wineBottle // fallback
+    })
     
     return { barcode, scatter, products: productPositions }
-  }, [pointCount, products, wineBottle])
+  }, [pointCount, products, wineBottle, battery])
   
   // Timeline configuration (in seconds) - Three Act Structure
   const timeline = {
