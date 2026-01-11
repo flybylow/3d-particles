@@ -40,22 +40,22 @@
   white-space: nowrap;
 }
 
-/* Product label - top right */
+/* Product label - center bottom, above tagline */
 .product-label {
   position: absolute;
-  top: 40px;
-  right: 48px;
+  bottom: 16%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
   z-index: 10;
-  text-align: right;
+  text-align: center;
   opacity: 0;
-  transform: translateY(-8px);
   transition: all 0.5s ease-out;
   pointer-events: none;
 }
 
 .product-label.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0);
 }
 
 .product-label .product-category {
@@ -161,12 +161,12 @@
   }
   
   .product-label {
-    top: 24px;
-    right: 24px;
+    bottom: 18%;
+    padding: 0 24px;
   }
   
   .hero-tagline {
-    bottom: 15%;
+    bottom: 12%;
     padding: 0 24px;
   }
   
