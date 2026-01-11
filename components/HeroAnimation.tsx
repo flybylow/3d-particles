@@ -164,6 +164,8 @@ export function HeroAnimation({
             morphProgress
           )
           shouldRotate = morphProgress > 0.5 // Start rotating when halfway morphed
+          // Apply Y offset during morphing too to prevent jump
+          // The Y offset will be applied in the interpolation loop
         }
         
         if (elapsed > timeline.intro) {
@@ -242,7 +244,8 @@ export function HeroAnimation({
         let targetValue = target[idx]
         
         // Apply vertical offset for product phases (Y coordinate)
-        if (j === 1 && phase === 'cycling') {
+        // Apply during intro morphing too to prevent jump when transitioning to cycling
+        if (j === 1 && (phase === 'cycling' || (phase === 'intro' && elapsed > timeline.intro - 1.2))) {
           targetValue += productYOffset
         }
         
