@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
+import { useTShirtPositions } from './TShirtGeometry'
 import {
   scanLightVertexShader,
   scanLightFragmentShader,
@@ -134,23 +135,25 @@ export function HeroAnimation({
     []
   )
   
-  // Load both product models
+  // Load all product models
   const wineBottle = useWineBottlePositions(pointCount)
   const battery = useBatteryPositions(pointCount)
+  const tshirt = useTShirtPositions(pointCount)
   
   // Generate all position sets
   const positionSets = useMemo(() => {
     const barcode = generateBarcodePositions(pointCount)
     const scatter = generateScatterPositions(pointCount)
-    // Map products: wine bottle first, then battery
+    // Map products: wine bottle first, then battery, then t-shirt
     const productPositions = products.map((product, index) => {
       if (index === 0) return wineBottle
       if (index === 1) return battery
+      if (index === 2) return tshirt
       return wineBottle // fallback
     })
     
     return { barcode, scatter, products: productPositions }
-  }, [pointCount, products, wineBottle, battery])
+  }, [pointCount, products, wineBottle, battery, tshirt])
   
   // Timeline configuration (in seconds) - NEW SPEC: Electric Awakening
   // Copy Rhythm: "Scan." → "Any product." → "Verify." → "Trusted."
