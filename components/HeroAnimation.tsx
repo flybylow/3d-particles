@@ -175,20 +175,39 @@ export function HeroAnimation({
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
-    // Update scan line position during intro phase
+    // Update scan line position during intro phase and barcode opacity
+    let scanLineX = 0
     if (phase === 'intro' && scanLineRef.current) {
       const morphStartTime = timeline.intro - 1.2
       if (elapsed < morphStartTime) {
         // Scan line sweeps across during chaos phase
         const scanProgress = (elapsed % 2.5) / 2.5 // 2.5 second sweep cycle
-        scanLineRef.current.position.x = -3 + (scanProgress * 6) // Sweep from -3 to 3
+        scanLineX = -3 + (scanProgress * 6) // Sweep from -3 to 3
+        scanLineRef.current.position.x = scanLineX
         scanLineRef.current.visible = true
+        
+        // Fade out barcode as scan line passes (barcode fades out from left to right)
+        if (barcodeMaterialRef.current) {
+          // Barcode starts at opacity 1, fades to 0 as scan progresses
+          const fadeProgress = Math.min(scanProgress, 1) // 0 to 1
+          barcodeMaterialRef.current.opacity = 0.92 * (1 - fadeProgress)
+        }
       } else {
         // Hide scan line when morphing to product
         scanLineRef.current.visible = false
+        // Fully fade out barcode
+        if (barcodeMaterialRef.current) {
+          barcodeMaterialRef.current.opacity = 0
+        }
       }
-    } else if (scanLineRef.current) {
-      scanLineRef.current.visible = false
+    } else {
+      // Hide scan line and barcode in other phases
+      if (scanLineRef.current) {
+        scanLineRef.current.visible = false
+      }
+      if (barcodeMaterialRef.current) {
+        barcodeMaterialRef.current.opacity = 0
+      }
     }
     
     // NEW FLOW: Chaos background → Rapid product cycling
