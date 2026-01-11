@@ -322,63 +322,61 @@
       "uri": "scene.bin"
     }
   ],
-  "images": [
-    {
-      "uri": "textures/Material1718_baseColor.jpeg"
-    },
-    {
-      "uri": "textures/Material1722_baseColor.jpeg"
-    },
-    {
-      "uri": "textures/Material1724_baseColor.jpeg"
-    },
-    {
-      "uri": "textures/Infinite_Light_1_baseColor.jpeg"
-    }
-  ],
   "materials": [
     {
       "doubleSided": true,
       "name": "Material1718",
       "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 0
-        },
         "metallicFactor": 0.0,
-        "roughnessFactor": 0.955012694
+        "roughnessFactor": 0.955012694,
+        "baseColorFactor": [
+          0.8,
+          0.8,
+          0.8,
+          1.0
+        ]
       }
     },
     {
       "doubleSided": true,
       "name": "Material1722",
       "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 1
-        },
         "metallicFactor": 0.0,
-        "roughnessFactor": 0.955012694
+        "roughnessFactor": 0.955012694,
+        "baseColorFactor": [
+          0.8,
+          0.8,
+          0.8,
+          1.0
+        ]
       }
     },
     {
       "doubleSided": true,
       "name": "Material1724",
       "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 2
-        },
         "metallicFactor": 0.0,
-        "roughnessFactor": 0.955012694
+        "roughnessFactor": 0.955012694,
+        "baseColorFactor": [
+          0.8,
+          0.8,
+          0.8,
+          1.0
+        ]
       }
     },
     {
       "doubleSided": true,
       "name": "Infinite_Light_1",
       "pbrMetallicRoughness": {
-        "baseColorTexture": {
-          "index": 3
-        },
         "metallicFactor": 0.0,
-        "roughnessFactor": 0.955012694
+        "roughnessFactor": 0.955012694,
+        "baseColorFactor": [
+          0.8,
+          0.8,
+          0.8,
+          1.0
+        ]
       }
     }
   ],
@@ -576,24 +574,6 @@
       "nodes": [
         0
       ]
-    }
-  ],
-  "textures": [
-    {
-      "sampler": 0,
-      "source": 0
-    },
-    {
-      "sampler": 0,
-      "source": 1
-    },
-    {
-      "sampler": 0,
-      "source": 2
-    },
-    {
-      "sampler": 0,
-      "source": 3
     }
   ]
 }
