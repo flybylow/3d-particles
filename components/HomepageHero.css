@@ -40,13 +40,22 @@
   white-space: nowrap;
 }
 
-/* Product label styles - now used in tagline */
+/* Product tag - badge style for better readability */
+.hero-tagline .product-tag {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(4px);
+}
+
 .hero-tagline .product-category {
   display: block;
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 11px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.5);
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 4px;
@@ -57,7 +66,7 @@
   font-family: 'Suisse Int\'l', 'Inter', system-ui, sans-serif;
   font-size: 14px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 /* Bottom tagline */

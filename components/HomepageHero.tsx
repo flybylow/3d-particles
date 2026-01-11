@@ -95,10 +95,10 @@ export function HomepageHero() {
       {/* Bottom tagline - Shows product info during cycling, otherwise main tagline */}
       <div className={`hero-tagline visible`}>
         {phase === 'cycling' ? (
-          <>
+          <div className="product-tag">
             <span className="product-category">{currentProduct.category}</span>
             <span className="product-name">{currentProduct.name}</span>
-          </>
+          </div>
         ) : (
           <p>Digital Product Passports</p>
         )}
