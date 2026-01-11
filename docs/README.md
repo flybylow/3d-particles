@@ -8,6 +8,7 @@ This folder contains all project documentation.
 
 ## Documents
 
+- 👉 **[Hero Animation Spec](./HERO_ANIMATION_SPEC.md)** - Complete specification for the persuasion sequence
 - [Project Rules](./project-rules.md) - Essential project rules and guidelines
 - [Project Setup](./project-setup.md) - Installation and configuration guide
 - [Particle Animation System](./particle-animation-system.md) - How the 3D particle animation works
