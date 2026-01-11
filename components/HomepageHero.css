@@ -175,6 +175,57 @@
   }
 }
 
+/* Phase Indicator - For MVP Testing */
+.phase-indicator {
+  position: absolute;
+  top: 40px;
+  left: 48px;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: 'Inter', system-ui, monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+.phase-label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.phase-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4CC9F0;
+  margin-bottom: 12px;
+  letter-spacing: 0.05em;
+}
+
+.phase-stages {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.phase-stages span {
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+  transition: all 0.3s ease;
+}
+
+.phase-stages span.active {
+  background: rgba(76, 201, 240, 0.2);
+  color: #4CC9F0;
+  font-weight: 600;
+}
+
 /* Dark mode scrollbar for page */
 ::-webkit-scrollbar {
   width: 8px;

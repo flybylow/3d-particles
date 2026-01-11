@@ -118,6 +118,19 @@ export function HomepageHero() {
         <p>Digital Product Passports for the EU economy</p>
       </div>
       
+      {/* Phase Indicator - For MVP Testing */}
+      <div className="phase-indicator">
+        <div className="phase-label">Phase:</div>
+        <div className="phase-name">{phase.toUpperCase()}</div>
+        <div className="phase-stages">
+          <span className={phase === 'chaos' ? 'active' : ''}>1.CHAOS</span>
+          <span className={phase === 'merge' ? 'active' : ''}>2.MERGE</span>
+          <span className={phase === 'barcode' ? 'active' : ''}>3.BARCODE</span>
+          <span className={phase === 'product' ? 'active' : ''}>4.PRODUCT</span>
+          <span className={phase === 'portal' ? 'active' : ''}>5.PORTAL</span>
+        </div>
+      </div>
+      
       {/* Scroll indicator */}
       <div className="scroll-indicator">
         <div className="scroll-line"></div>
