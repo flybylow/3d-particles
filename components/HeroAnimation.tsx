@@ -245,6 +245,31 @@ export function HeroAnimation({
         }
         
         if (elapsed > timeline.intro) {
+          setPhase('barcode')
+          onPhaseChange?.('barcode', 0)
+        }
+        break
+        
+      case 'barcode':
+        // Barcode phase: Particles form into barcode pattern
+        const barcodeElapsed = elapsed
+        const barcodeProgress = Math.min(barcodeElapsed / timeline.barcode, 1)
+        const barcodeEased = easeInOutCubic(barcodeProgress)
+        
+        target = positionSets.barcode
+        progress = barcodeEased
+        particleColor = new THREE.Color().lerpColors(
+          colors.chaosWarm,
+          colors.scanLight,
+          barcodeEased
+        )
+        
+        // Hide scan line during barcode phase
+        if (scanLineRef.current) {
+          scanLineRef.current.visible = false
+        }
+        
+        if (barcodeElapsed > timeline.barcode) {
           setPhase('cycling')
           productStartTime.current = clock.elapsedTime
           setCurrentProductIndex(0)
