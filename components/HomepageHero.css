@@ -1,0 +1,195 @@
+/* Homepage Hero - Full viewport */
+.homepage-hero {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: #08080c;
+}
+
+.hero-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Main headline */
+.hero-text {
+  position: absolute;
+  bottom: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.8s ease-out;
+  pointer-events: none;
+}
+
+.hero-text.visible {
+  opacity: 1;
+}
+
+.hero-text h1 {
+  font-family: 'Suisse Int\'l', 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* Product label - top right */
+.product-label {
+  position: absolute;
+  top: 40px;
+  right: 48px;
+  z-index: 10;
+  text-align: right;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: all 0.5s ease-out;
+  pointer-events: none;
+}
+
+.product-label.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.product-label .product-category {
+  display: block;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.product-label .product-name {
+  display: block;
+  font-family: 'Suisse Int\'l', 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Bottom tagline */
+.hero-tagline {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 1s ease-out 0.3s;
+  pointer-events: none;
+}
+
+.hero-tagline.visible {
+  opacity: 1;
+}
+
+.hero-tagline p {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+/* Scroll indicator */
+.scroll-indicator {
+  position: absolute;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 48px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  animation: scrollPulse 2s ease-in-out infinite;
+}
+
+@keyframes scrollPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scaleY(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scaleY(1.1);
+  }
+}
+
+/* Optional: Tabulas wordmark position */
+.hero-wordmark {
+  position: absolute;
+  top: 40px;
+  left: 48px;
+  z-index: 10;
+}
+
+.hero-wordmark svg {
+  height: 20px;
+  fill: #ffffff;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-text {
+    bottom: 30%;
+    padding: 0 24px;
+  }
+  
+  .hero-text h1 {
+    white-space: normal;
+    line-height: 1.2;
+  }
+  
+  .product-label {
+    top: 24px;
+    right: 24px;
+  }
+  
+  .hero-tagline {
+    bottom: 15%;
+    padding: 0 24px;
+  }
+  
+  .scroll-indicator {
+    bottom: 24px;
+  }
+}
+
+/* Dark mode scrollbar for page */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #08080c;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
