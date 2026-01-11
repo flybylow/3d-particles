@@ -1,6 +1,7 @@
 import { useRef, useMemo, useEffect, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
 import { useTShirtPositions } from './TShirtGeometry'
@@ -18,20 +19,7 @@ interface HeroAnimationProps {
   onPhaseChange?: (phase: string, productIndex: number) => void
 }
 
-// Easing functions
-function easeInOutCubic(t: number): number {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
-}
-
-function easeInQuad(t: number): number {
-  return t * t
-}
-
-function easeOutQuad(t: number): number {
-  return t * (2 - t)
-}
-
-// Generate scattered positions for chaos phase
+// Generate scattered positions
 function generateScatterPositions(pointCount: number, spread: number = 2.5): Float32Array {
   const positions: number[] = []
   
@@ -50,63 +38,10 @@ function generateScatterPositions(pointCount: number, spread: number = 2.5): Flo
   return new Float32Array(positions)
 }
 
-// Generate barcode positions (vertical bars)
-function generateBarcodePositions(pointCount: number): Float32Array {
-  const positions: number[] = []
-  
-  // Barcode dimensions (centered at origin)
-  const width = 1.8 // Total width
-  const height = 0.9 // Total height
-  const barCount = 40 // Number of vertical bars
-  const barWidth = width / barCount
-  
-  // Generate bar widths (varying thickness like real barcode)
-  const barWidths: number[] = []
-  for (let i = 0; i < barCount; i++) {
-    // Random bar width (1x, 2x, 3x, or 4x base width)
-    const multiplier = [1, 1, 1, 2, 2, 3, 4][Math.floor(Math.random() * 7)]
-    barWidths.push(barWidth * multiplier)
-  }
-  
-  // Calculate total width with varying bar widths
-  const totalWidth = barWidths.reduce((sum, w) => sum + w, 0)
-  let currentX = -totalWidth / 2
-  
-  // Distribute points across bars
-  for (let barIndex = 0; barIndex < barCount; barIndex++) {
-    const barWidth = barWidths[barIndex]
-    const barX = currentX + barWidth / 2
-    const pointsPerBar = Math.floor((pointCount / barCount) * (barWidth / barWidths[0]))
-    
-    for (let i = 0; i < pointsPerBar; i++) {
-      const x = barX + (Math.random() - 0.5) * barWidth * 0.8
-      const y = (Math.random() - 0.5) * height
-      const z = (Math.random() - 0.5) * 0.1 // Slight depth
-      
-      positions.push(x, y, z)
-    }
-    
-    currentX += barWidth
-  }
-  
-  // Fill remaining points if needed
-  while (positions.length / 3 < pointCount) {
-    const barIndex = Math.floor(Math.random() * barCount)
-    const barWidth = barWidths[barIndex]
-    const barX = -totalWidth / 2 + barWidths.slice(0, barIndex).reduce((sum, w) => sum + w, 0) + barWidth / 2
-    const x = barX + (Math.random() - 0.5) * barWidth * 0.8
-    const y = (Math.random() - 0.5) * height
-    const z = (Math.random() - 0.5) * 0.1
-    
-    positions.push(x, y, z)
-  }
-  
-  // Trim to exact point count
-  return new Float32Array(positions.slice(0, pointCount * 3))
+// Easing function for smoother animation
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
 }
-
-// 5-Act Animation Phases (per spec)
-type AnimationPhase = 'chaos' | 'merge' | 'barcode' | 'product' | 'portal'
 
 export function HeroAnimation({
   products,
@@ -116,12 +51,14 @@ export function HeroAnimation({
 }: HeroAnimationProps) {
   const pointsRef = useRef<THREE.Points>(null)
   const materialRef = useRef<THREE.PointsMaterial>(null)
-  const { camera, clock } = useThree()
-  
-  const [phase, setPhase] = useState<AnimationPhase>('chaos')
+  const [currentProductIndex, setCurrentProductIndex] = useState(0)
+  const [phase, setPhase] = useState<'intro' | 'cycling'>('intro')
   const phaseStartTime = useRef(0)
+  const productStartTime = useRef(0) // Track when current product started
+  const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
+  const { clock } = useThree()
   
-  // Load all product models (we'll use the first one for the final product reveal)
+  // Load all product models
   const wineBottle = useWineBottlePositions(pointCount)
   const battery = useBatteryPositions(pointCount)
   const tshirt = useTShirtPositions(pointCount)
@@ -129,42 +66,34 @@ export function HeroAnimation({
   // Generate all position sets
   const positionSets = useMemo(() => {
     const scatter = generateScatterPositions(pointCount)
-    const barcode = generateBarcodePositions(pointCount)
-    const productPositions = [wineBottle, battery, tshirt]
+    // Map products: wine bottle first, then battery, then t-shirt
+    const productPositions = products.map((product, index) => {
+      if (index === 0) return wineBottle
+      if (index === 1) return battery
+      if (index === 2) return tshirt
+      return wineBottle // fallback
+    })
     
-    return { scatter, barcode, products: productPositions }
-  }, [pointCount, wineBottle, battery, tshirt])
+    return { scatter, products: productPositions }
+  }, [pointCount, products, wineBottle, battery, tshirt])
   
-  // Timeline configuration (per spec: 12 seconds total)
-  // Adjusted: Barcode visible early during chaos phase
+  // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
+  // Flow: Chaos background → "Scan any product" → Rapid product cycling
   const timeline = {
-    chaos: 3.0,    // 0-3s: Chaos of products (barcode visible from 1.5s)
-    merge: 2.0,    // 3-5s: Merge phase
-    barcode: 2.0,  // 5-7s: Barcode holds/verifies
-    product: 2.5,  // 7-9.5s: Product emergence
-    portal: 2.5    // 9.5-12s: Portal/tunnel
+    intro: 3.5,              // 0-3.5s: Intro with chaos, text appears
+    productDuration: 2.5,    // Time to show each product (transform + display)
+    transformDuration: 1.0   // Time to morph between products
   }
   
-  // Color states (per spec)
+  // Color states for emotional journey
   const colors = {
-    chaosWarm: new THREE.Color(0xFF6B35),      // Warm amber
-    lightning: new THREE.Color(0x4CC9F0),      // Electric blue
-    ignited: new THREE.Color(0x00FFFF),        // Cyan
-    verifiedCool: new THREE.Color(0x88927D),   // Sage green
+    chaosWarm: new THREE.Color(0xFF6B35),      // Warm amber (error state)
+    scanLight: new THREE.Color(0x4CC9F0),      // Blue-white (scanning)
+    verifiedCool: new THREE.Color(0x88927D),   // Sage green (success)
     offWhite: new THREE.Color(0xF8F8F7)        // Clean white
   }
   
-  // Camera positions (Three.js uses positive Z for camera distance)
-  // Per spec: WIDE (far) → PUSH IN → CLOSE → INTO (very close)
-  const cameraPositions = {
-    wide: { z: 80, fov: 60 },    // Very far back for wide shot (see all products)
-    merge: { z: 50, fov: 50 },   // Pushing in
-    barcode: { z: 25, fov: 45 },  // Closer
-    product: { z: 15, fov: 40 },  // Close
-    portal: { z: 8, fov: 30 }    // Very close (into product)
-  }
-  
-  // Initialize positions
+  // Initialize positions - Start with CHAOS
   const currentPositions = useMemo(() => {
     return positionSets.scatter.slice()
   }, [positionSets])
@@ -176,123 +105,97 @@ export function HeroAnimation({
   
   // Main animation loop
   useFrame((state, delta) => {
-    if (!pointsRef.current || !materialRef.current) return
+    if (!pointsRef.current) return
     
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
+    // NEW FLOW: Chaos background → Rapid product cycling
     let target: Float32Array
     let progress = 0
-    let particleColor = colors.chaosWarm
-    let currentCameraZ = camera.position.z
-    let currentFOV = (camera as THREE.PerspectiveCamera).fov
+    let shouldRotate = false
+    let particleColor = colors.offWhite
+    let chaosOpacity = 0.4 // Background chaos particles
+    let productOpacity = 0 // Center product particles
     
-    // Phase transitions
-    let totalElapsed = 0
-    if (phase === 'chaos' && elapsed > timeline.chaos) {
-      setPhase('merge')
-      onPhaseChange?.('merge', 0)
-    } else if (phase === 'merge' && elapsed > timeline.merge) {
-      setPhase('barcode')
-      onPhaseChange?.('barcode', 0)
-    } else if (phase === 'barcode' && elapsed > timeline.barcode) {
-      setPhase('product')
-      onPhaseChange?.('product', 0)
-    } else if (phase === 'product' && elapsed > timeline.product) {
-      setPhase('portal')
-      onPhaseChange?.('portal', 0)
-    }
-    
-    // Phase-specific logic
     switch (phase) {
-      case 'chaos':
-        // Act 1: Chaos of products - particles drifting
-        // From 1.5s onwards, start showing barcode (for "Scan any product" text)
-        const barcodeStartTime = 1.5
-        if (elapsed >= barcodeStartTime) {
-          // Start morphing to barcode so it's visible when "Any product." appears
-          const barcodeProgress = Math.min((elapsed - barcodeStartTime) / (timeline.chaos - barcodeStartTime), 1)
-          const barcodeEased = easeInOutCubic(barcodeProgress * 0.5) // Slow, subtle morph
-          
-          // Blend: Mostly scatter, but hint of barcode
-          target = positionSets.barcode
-          progress = barcodeEased * 0.3 // Only 30% toward barcode (subtle)
-          particleColor = colors.chaosWarm
-        } else {
+      case 'intro':
+        // Intro: Chaos background, then start morphing to first product
+        const morphStartTime = timeline.intro - 1.2 // Start morphing 1.2s before end
+        
+        if (elapsed < morphStartTime) {
+          // Pure chaos phase
           target = positionSets.scatter
           progress = 1
           particleColor = colors.chaosWarm
+          
+          // Gentle floating movement
+          if (pointsRef.current) {
+            pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.05
+          }
+        } else {
+          // Morphing from chaos to first product
+          const morphElapsed = elapsed - morphStartTime
+          const morphProgress = easeInOutCubic(Math.min(morphElapsed / 1.2, 1))
+          
+          target = positionSets.products[0]
+          progress = morphProgress
+          particleColor = new THREE.Color().lerpColors(
+            colors.chaosWarm,
+            colors.offWhite,
+            morphProgress
+          )
+          shouldRotate = morphProgress > 0.5 // Start rotating when halfway morphed
         }
         
-        // Camera: WIDE
-        currentCameraZ = THREE.MathUtils.lerp(currentCameraZ, cameraPositions.wide.z, delta * 2)
-        currentFOV = THREE.MathUtils.lerp(currentFOV, cameraPositions.wide.fov, delta * 2)
-        break
-        
-      case 'merge':
-        // Act 2: Products merge toward center
-        const mergeProgress = Math.min(elapsed / timeline.merge, 1)
-        const mergeEased = easeInQuad(mergeProgress)
-        
-        // Blend from scatter to barcode (merging)
-        target = positionSets.barcode
-        progress = mergeEased
-        particleColor = new THREE.Color().lerpColors(colors.chaosWarm, colors.lightning, mergeEased)
-        
-        // Camera: Push IN
-        currentCameraZ = THREE.MathUtils.lerp(currentCameraZ, cameraPositions.merge.z, delta * 3)
-        currentFOV = THREE.MathUtils.lerp(currentFOV, cameraPositions.merge.fov, delta * 3)
-        break
-        
-      case 'barcode':
-        // Act 3: Barcode formation
-        const barcodeProgress = Math.min(elapsed / timeline.barcode, 1)
-        const barcodeEased = easeInOutCubic(barcodeProgress)
-        
-        target = positionSets.barcode
-        progress = 1 // Barcode is formed
-        particleColor = new THREE.Color().lerpColors(colors.lightning, colors.verifiedCool, barcodeEased)
-        
-        // Camera: Continue pushing IN
-        currentCameraZ = THREE.MathUtils.lerp(currentCameraZ, cameraPositions.barcode.z, delta * 3)
-        currentFOV = THREE.MathUtils.lerp(currentFOV, cameraPositions.barcode.fov, delta * 3)
-        break
-        
-      case 'product':
-        // Act 4: Product emergence (using first product - wine bottle)
-        const productProgress = Math.min(elapsed / timeline.product, 1)
-        const productEased = easeInOutCubic(productProgress)
-        
-        target = positionSets.products[0] // Wine bottle
-        progress = productEased
-        particleColor = new THREE.Color().lerpColors(colors.verifiedCool, colors.offWhite, productEased)
-        
-        // Camera: CLOSE
-        currentCameraZ = THREE.MathUtils.lerp(currentCameraZ, cameraPositions.product.z, delta * 3)
-        currentFOV = THREE.MathUtils.lerp(currentFOV, cameraPositions.product.fov, delta * 3)
-        break
-        
-      case 'portal':
-        // Act 5: Portal/tunnel effect (simplified for now)
-        const portalProgress = Math.min(elapsed / timeline.portal, 1)
-        const portalEased = easeInQuad(portalProgress)
-        
-        // Expand particles outward (tunnel effect)
-        target = positionSets.products[0]
-        progress = 1
-        particleColor = colors.offWhite
-        
-        // Scale particles outward for tunnel effect
-        for (let i = 0; i < positions.length; i += 3) {
-          positions[i] *= (1 + portalEased * 2)
-          positions[i + 1] *= (1 + portalEased * 2)
-          positions[i + 2] *= (1 + portalEased * 3)
+        if (elapsed > timeline.intro) {
+          setPhase('cycling')
+          productStartTime.current = clock.elapsedTime
+          setCurrentProductIndex(0)
+          onPhaseChange?.('cycling', 0)
         }
-        pointsRef.current.geometry.attributes.position.needsUpdate = true
+        break
         
-        // Camera: INTO product
-        currentCameraZ = THREE.MathUtils.lerp(currentCameraZ, cameraPositions.portal.z, delta * 5)
-        currentFOV = THREE.MathUtils.lerp(currentFOV, cameraPositions.portal.fov, delta * 5)
+      case 'cycling':
+        // Rapid product cycling: Products morph directly into each other
+        const productElapsed = clock.elapsedTime - productStartTime.current
+        const nextProductIndex = (currentProductIndex + 1) % products.length
+        
+        // Check if we're in transformation phase (last part of product cycle)
+        const isTransforming = productElapsed > (timeline.productDuration - timeline.transformDuration)
+        
+        // Check if it's time to switch to next product
+        if (productElapsed > timeline.productDuration) {
+          setCurrentProductIndex(nextProductIndex)
+          productStartTime.current = clock.elapsedTime
+          onPhaseChange?.('cycling', nextProductIndex)
+        }
+        
+        if (isTransforming) {
+          // Morphing from current product to NEXT product
+          const transformElapsed = productElapsed - (timeline.productDuration - timeline.transformDuration)
+          const morphT = easeInOutCubic(transformElapsed / timeline.transformDuration)
+          
+          // Blend between current and next product
+          const currentTarget = positionSets.products[currentProductIndex]
+          const nextTarget = positionSets.products[nextProductIndex]
+          
+          // Create blended target positions
+          target = new Float32Array(pointCount * 3)
+          for (let i = 0; i < target.length; i++) {
+            target[i] = THREE.MathUtils.lerp(currentTarget[i], nextTarget[i], morphT)
+          }
+          
+          progress = 1 // We're manually blending, so set progress to 1
+          particleColor = colors.offWhite
+          shouldRotate = true
+        } else {
+          // Holding current product
+          target = positionSets.products[currentProductIndex]
+          progress = 1
+          particleColor = colors.offWhite
+          shouldRotate = true
+        }
         break
         
       default:
@@ -300,48 +203,71 @@ export function HeroAnimation({
         progress = 1
     }
     
-    // Update camera
-    camera.position.z = currentCameraZ
-    if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = currentFOV
-      camera.updateProjectionMatrix()
+    // Update particle color
+    if (materialRef.current) {
+      materialRef.current.color.lerp(particleColor, delta * 3)
+      // Update opacity based on phase
+      materialRef.current.opacity = phase === 'intro' ? chaosOpacity : 0.92
     }
     
-    // Update particle color
-    materialRef.current.color.lerp(particleColor, delta * 3)
+    // Interpolate positions with staggered timing
+    // Apply uniform Y offset for products (all objects centered at origin by default)
+    const productYOffset = -1.2 // Vertical position adjustment for larger products
     
-    // Interpolate positions (skip portal phase - handled above)
-    if (phase !== 'portal') {
-      const productYOffset = -1.2
+    for (let i = 0; i < positions.length; i += 3) {
+      const pointIndex = i / 3
+      const stagger = (pointIndex / pointCount) * 0.3
+      const localProgress = Math.max(0, Math.min(1, (progress - stagger) / (1 - stagger)))
       
-      for (let i = 0; i < positions.length; i += 3) {
-        const pointIndex = i / 3
-        const stagger = (pointIndex / pointCount) * 0.3
-        const localProgress = Math.max(0, Math.min(1, (progress - stagger) / (1 - stagger)))
+      for (let j = 0; j < 3; j++) {
+        const idx = i + j
+        let targetValue = target[idx]
         
-        for (let j = 0; j < 3; j++) {
-          const idx = i + j
-          let targetValue = target[idx]
-          
-          // Apply vertical offset for product phase
-          if (j === 1 && phase === 'product') {
-            targetValue += productYOffset
-          }
-          
-          positions[idx] = THREE.MathUtils.lerp(
-            positions[idx],
-            targetValue,
-            localProgress * delta * 8
-          )
+        // Apply vertical offset for product phases (Y coordinate)
+        if (j === 1 && phase === 'cycling') {
+          targetValue += productYOffset
         }
+        
+        positions[idx] = THREE.MathUtils.lerp(
+          positions[idx],
+          targetValue,
+          localProgress * delta * 8
+        )
+      }
+    }
+    
+    pointsRef.current.geometry.attributes.position.needsUpdate = true
+    
+    // Rotation during product cycling - rotate around product's center vertical axis
+    if (shouldRotate && phase === 'cycling') {
+      // Increment rotation angle
+      rotationAngle.current += delta * 0.5 // Faster rotation for dynamic feel
+      
+      const cos = Math.cos(rotationAngle.current)
+      const sin = Math.sin(rotationAngle.current)
+      const productYOffset = -1.2 // Same offset as above for consistency
+      
+      // Apply rotation to target positions (not accumulated positions)
+      for (let i = 0; i < positions.length; i += 3) {
+        const targetX = target[i]
+        const targetZ = target[i + 2]
+        
+        // Rotate around Y axis (vertical center)
+        positions[i] = targetX * cos - targetZ * sin
+        positions[i + 1] = target[i + 1] + productYOffset // Apply Y offset
+        positions[i + 2] = targetX * sin + targetZ * cos
       }
       
       pointsRef.current.geometry.attributes.position.needsUpdate = true
+    } else if (rotationAngle.current !== 0) {
+      // Reset rotation when not in product phase
+      rotationAngle.current = 0
     }
   })
   
   return (
     <>
+      {/* Particle system */}
       <points ref={pointsRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -365,3 +291,5 @@ export function HeroAnimation({
     </>
   )
 }
+
+

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense, useEffect } from 'react'
+import { useState, Suspense } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { HeroAnimation } from './HeroAnimation'
 import { preloadWineBottle } from './WineBottleGeometry'
@@ -38,60 +38,35 @@ preloadWineBottle()
 preloadBattery()
 preloadTShirt()
 
-// 5-Act Structure (per spec)
-// Copy timing:
-// "Scan." (0s) → "Any product." (1.5s) → "Verify." (5s) → "Trusted." (7.5s)
+// NEW FLOW: Chaos background → Rapid product cycling
+// Copy: "Scan any product." → Product labels (check, check, check!)
+const PHASES = {
+  intro: {
+    headline: 'Scan any product.', // 0-2.5s: Intro with chaos background
+    subline: ''
+  },
+  cycling: {
+    headline: '', // Let product labels speak
+    subline: ''
+  }
+}
+
 export function HomepageHero() {
-  const [phase, setPhase] = useState('chaos')
-  const [headline, setHeadline] = useState('')
-  const [showHeadline, setShowHeadline] = useState(false)
+  const [phase, setPhase] = useState('intro')
+  const [currentProduct, setCurrentProduct] = useState(PRODUCTS[0])
+  const [showText, setShowText] = useState(true) // Start with text visible
   
   const handlePhaseChange = (newPhase: string, productIndex: number) => {
     setPhase(newPhase)
-    
-    // Update headline based on phase (per spec timing)
-    switch (newPhase) {
-      case 'chaos':
-        setHeadline('Scan.')
-        setShowHeadline(true)
-        break
-      case 'barcode':
-        setHeadline('Verify.')
-        setShowHeadline(true)
-        break
-      case 'product':
-        setHeadline('Trusted.')
-        setShowHeadline(true)
-        break
-      case 'merge':
-      case 'portal':
-        setShowHeadline(false)
-        break
-      default:
-        setShowHeadline(false)
-    }
+    setCurrentProduct(PRODUCTS[productIndex])
   }
-  
-  // Initial "Scan." text, then "Any product." at 1.5s (per spec)
-  useEffect(() => {
-    setHeadline('Scan.')
-    setShowHeadline(true)
-    
-    const timer1 = setTimeout(() => {
-      setHeadline('Any product.')
-    }, 1500)
-    
-    return () => {
-      clearTimeout(timer1)
-    }
-  }, [])
   
   return (
     <section className="homepage-hero">
       {/* 3D Canvas */}
       <div className="hero-canvas">
         <Canvas
-          camera={{ position: [0, 0, 80], fov: 60 }}
+          camera={{ position: [0, 0, 5.5], fov: 50 }}
           gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
           dpr={[1, 2]}
         >
@@ -108,27 +83,20 @@ export function HomepageHero() {
         </Canvas>
       </div>
       
-      {/* Text Overlay - Per spec copy timing */}
-      <div className={`hero-text ${showHeadline ? 'visible' : ''}`}>
-        <h1>{headline}</h1>
+      {/* Text Overlay - "Scan any product." */}
+      <div className={`hero-text ${phase === 'intro' ? 'visible' : ''}`}>
+        <h1>{PHASES[phase as keyof typeof PHASES]?.headline || ''}</h1>
+      </div>
+      
+      {/* Product Label - Show during rapid cycling (check, check, check!) */}
+      <div className={`product-label ${phase === 'cycling' ? 'visible' : ''}`}>
+        <span className="product-category">{currentProduct.category}</span>
+        <span className="product-name">{currentProduct.name}</span>
       </div>
       
       {/* Bottom tagline - Always visible */}
       <div className={`hero-tagline visible`}>
         <p>Digital Product Passports for the EU economy</p>
-      </div>
-      
-      {/* Phase Indicator - For MVP Testing */}
-      <div className="phase-indicator">
-        <div className="phase-label">Phase:</div>
-        <div className="phase-name">{phase.toUpperCase()}</div>
-        <div className="phase-stages">
-          <span className={phase === 'chaos' ? 'active' : ''}>1.CHAOS</span>
-          <span className={phase === 'merge' ? 'active' : ''}>2.MERGE</span>
-          <span className={phase === 'barcode' ? 'active' : ''}>3.BARCODE</span>
-          <span className={phase === 'product' ? 'active' : ''}>4.PRODUCT</span>
-          <span className={phase === 'portal' ? 'active' : ''}>5.PORTAL</span>
-        </div>
       </div>
       
       {/* Scroll indicator */}
@@ -138,3 +106,4 @@ export function HomepageHero() {
     </section>
   )
 }
+
