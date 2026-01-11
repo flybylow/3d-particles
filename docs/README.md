@@ -11,6 +11,7 @@ This folder contains all project documentation.
 - [Project Rules](./project-rules.md) - Essential project rules and guidelines
 - [Project Setup](./project-setup.md) - Installation and configuration guide
 - [Particle Animation System](./particle-animation-system.md) - How the 3D particle animation works
+- [Three-Act Narrative](./three-act-narrative.md) - Complete implementation guide for chaos → barcode → chocolate bar
 - [Learnings](./learnings.md) - What we learned building this system
 
 ## Organization
