@@ -136,10 +136,11 @@ export function HeroAnimation({
   }, [pointCount, wineBottle, battery, tshirt])
   
   // Timeline configuration (per spec: 12 seconds total)
+  // Adjusted: Barcode visible early during chaos phase
   const timeline = {
-    chaos: 3.0,    // 0-3s: Chaos of products
+    chaos: 3.0,    // 0-3s: Chaos of products (barcode visible from 1.5s)
     merge: 2.0,    // 3-5s: Merge phase
-    barcode: 2.0,  // 5-7s: Barcode formation
+    barcode: 2.0,  // 5-7s: Barcode holds/verifies
     product: 2.5,  // 7-9.5s: Product emergence
     portal: 2.5    // 9.5-12s: Portal/tunnel
   }
@@ -206,9 +207,22 @@ export function HeroAnimation({
     switch (phase) {
       case 'chaos':
         // Act 1: Chaos of products - particles drifting
-        target = positionSets.scatter
-        progress = 1
-        particleColor = colors.chaosWarm
+        // From 1.5s onwards, start showing barcode (for "Scan any product" text)
+        const barcodeStartTime = 1.5
+        if (elapsed >= barcodeStartTime) {
+          // Start morphing to barcode so it's visible when "Any product." appears
+          const barcodeProgress = Math.min((elapsed - barcodeStartTime) / (timeline.chaos - barcodeStartTime), 1)
+          const barcodeEased = easeInOutCubic(barcodeProgress * 0.5) // Slow, subtle morph
+          
+          // Blend: Mostly scatter, but hint of barcode
+          target = positionSets.barcode
+          progress = barcodeEased * 0.3 // Only 30% toward barcode (subtle)
+          particleColor = colors.chaosWarm
+        } else {
+          target = positionSets.scatter
+          progress = 1
+          particleColor = colors.chaosWarm
+        }
         
         // Camera: WIDE
         currentCameraZ = THREE.MathUtils.lerp(currentCameraZ, cameraPositions.wide.z, delta * 2)
