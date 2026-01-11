@@ -216,9 +216,19 @@ export function HeroAnimation({
         progress = 1
         shouldRotate = true
         if (elapsed > timeline.product) {
-          // Loop back to chaos
-          setPhase('chaos')
-          onPhaseChange?.('chaos', currentProductIndex)
+          // If there's another product, morph directly to it
+          const nextProductIndex = (currentProductIndex + 1) % products.length
+          if (nextProductIndex !== 0) {
+            // Morph to next product directly
+            setCurrentProductIndex(nextProductIndex)
+            setPhase('transforming')
+            onPhaseChange?.('transforming', nextProductIndex)
+          } else {
+            // Loop back to chaos for first product
+            setCurrentProductIndex(0)
+            setPhase('chaos')
+            onPhaseChange?.('chaos', 0)
+          }
         }
         break
         

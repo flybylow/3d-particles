@@ -1,63 +1,94 @@
-import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { useMemo } from 'react'
 
-interface GLTFResult {
-  scene: THREE.Group
-}
-
-export function preloadBattery() {
-  useGLTF.preload('/models/batt2.gltf')
-}
-
-export function extractBatteryPositions(pointCount: number): Float32Array {
-  const { scene } = useGLTF('/models/batt2.gltf') as GLTFResult
-  const allVerts: THREE.Vector3[] = []
-  const scale = 0.25 // Even larger scale to make battery recognizable
-  const rotationX = -Math.PI / 2 // Rotate 90 degrees around X-axis to stand upright
-  const rotationZ = 0 // No Z rotation needed
-  const rotationY = 0 // No Y rotation needed
-  const yOffset = -0.6 // Adjust vertical position
-
-  scene.traverse((child) => {
-    if (child instanceof THREE.Mesh && child.geometry) {
-      const pos = child.geometry.attributes.position
-      const matrix = child.matrixWorld
-      // Sample every Nth vertex to reduce density and make shape clearer
-      const step = Math.max(1, Math.floor(pos.count / (pointCount * 1.5)))
-      for (let i = 0; i < pos.count; i += step) {
-        const vec = new THREE.Vector3().fromBufferAttribute(pos, i)
-        vec.applyMatrix4(matrix)
-        // Apply scale and initial rotation
-        vec.multiplyScalar(scale)
-        vec.applyAxisAngle(new THREE.Vector3(1, 0, 0), rotationX) // Stand upright
-        vec.applyAxisAngle(new THREE.Vector3(0, 0, 1), rotationZ) // Tilt for side view
-        vec.applyAxisAngle(new THREE.Vector3(0, 1, 0), rotationY) // Flip
-        allVerts.push(vec.clone())
+// Generate procedural battery positions with realistic details
+export function generateBatteryPositions(pointCount: number): Float32Array {
+  const positions: number[] = []
+  
+  // Battery dimensions (standing upright, cylindrical)
+  const batteryCount = 3
+  const batteryRadius = 0.12  // Radius for cylindrical batteries
+  const batteryHeight = 0.8
+  const spacing = 0.08
+  const totalWidth = (batteryRadius * 2 * batteryCount) + (spacing * (batteryCount - 1))
+  const yOffset = -0.9 // Move batteries down on screen
+  
+  // Points distribution
+  const pointsPerBattery = Math.floor(pointCount / batteryCount)
+  
+  for (let b = 0; b < batteryCount; b++) {
+    const xOffset = -totalWidth / 2 + (b * (batteryRadius * 2 + spacing)) + batteryRadius
+    
+    // Main cylindrical body (65% of points)
+    const bodyPoints = Math.floor(pointsPerBattery * 0.65)
+    for (let i = 0; i < bodyPoints; i++) {
+      // Cylindrical distribution
+      const angle = Math.random() * Math.PI * 2
+      const r = Math.sqrt(Math.random()) * batteryRadius // Uniform distribution in circle
+      const x = xOffset + Math.cos(angle) * r
+      const z = Math.sin(angle) * r
+      const y = (Math.random() - 0.5) * batteryHeight * 0.75 // Main body
+      
+      // Add vertical ridges for texture
+      const ridgePattern = Math.abs(Math.sin(angle * 12)) < 0.2
+      if (ridgePattern || Math.random() > 0.2) {
+        positions.push(x, y + yOffset, z)
       }
     }
-  })
-
-  if (allVerts.length === 0) {
-    console.warn('No vertices found in battery model')
-    return new Float32Array(pointCount * 3)
+    
+    // Positive terminal (top - 20% of points) - Make it SOLID
+    const terminalPoints = Math.floor(pointsPerBattery * 0.20)
+    for (let i = 0; i < terminalPoints; i++) {
+      const terminalRadius = batteryRadius * 0.35
+      const angle = Math.random() * Math.PI * 2
+      const r = Math.sqrt(Math.random()) * terminalRadius // Uniform circle distribution
+      const x = xOffset + Math.cos(angle) * r
+      const z = Math.sin(angle) * r
+      const y = batteryHeight * 0.42 + Math.random() * 0.08 // Top terminal area
+      positions.push(x, y + yOffset, z)
+    }
+    
+    // Negative terminal (bottom - 10% of points)
+    const bottomPoints = Math.floor(pointsPerBattery * 0.10)
+    for (let i = 0; i < bottomPoints; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const r = Math.sqrt(Math.random()) * batteryRadius * 0.9
+      const x = xOffset + Math.cos(angle) * r
+      const z = Math.sin(angle) * r
+      const y = -batteryHeight * 0.42 + Math.random() * 0.03
+      positions.push(x, y + yOffset, z)
+    }
+    
+    // Label band (5% of points) - on the surface
+    const labelPoints = Math.floor(pointsPerBattery * 0.05)
+    for (let i = 0; i < labelPoints; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const x = xOffset + Math.cos(angle) * batteryRadius * 1.01 // Slightly outside surface
+      const z = Math.sin(angle) * batteryRadius * 1.01
+      const y = (Math.random() - 0.5) * 0.2 // Band in middle
+      positions.push(x, y + yOffset, z)
+    }
   }
-
-  // Sample or repeat vertices to match pointCount
-  const positions = new Float32Array(pointCount * 3)
-  for (let i = 0; i < pointCount; i++) {
-    const vert = allVerts[i % allVerts.length]
-    positions[i * 3] = vert.x
-    positions[i * 3 + 1] = vert.y + yOffset // Apply vertical offset
-    positions[i * 3 + 2] = vert.z
+  
+  // Fill remaining points
+  while (positions.length < pointCount * 3) {
+    const b = Math.floor(Math.random() * batteryCount)
+    const xOffset = -totalWidth / 2 + (b * (batteryRadius * 2 + spacing)) + batteryRadius
+    const angle = Math.random() * Math.PI * 2
+    const r = Math.sqrt(Math.random()) * batteryRadius
+    const x = xOffset + Math.cos(angle) * r
+    const z = Math.sin(angle) * r
+    const y = (Math.random() - 0.5) * batteryHeight * 0.75
+    positions.push(x, y + yOffset, z)
   }
-
-  return positions
+  
+  return new Float32Array(positions.slice(0, pointCount * 3))
 }
 
 export function useBatteryPositions(pointCount: number) {
-  return useMemo(() => extractBatteryPositions(pointCount), [pointCount])
+  return useMemo(() => generateBatteryPositions(pointCount), [pointCount])
 }
 
-// Preload the model
-preloadBattery()
+export function preloadBattery() {
+  // No preloading needed for procedural geometry
+}
