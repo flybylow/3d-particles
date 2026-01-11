@@ -80,9 +80,9 @@ export function HeroAnimation({
   // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
   // Flow: Chaos background → "Scan any product" → Rapid product cycling
   const timeline = {
-    intro: 2.5,              // 0-2.5s: Intro with chaos, text appears
-    productDuration: 1.5,    // Time to show each product (transform + display)
-    transformDuration: 0.8   // Time to morph to product
+    intro: 3.5,              // 0-3.5s: Intro with chaos, text appears
+    productDuration: 2.5,    // Time to show each product (transform + display)
+    transformDuration: 1.0   // Time to morph between products
   }
   
   // Color states for emotional journey
@@ -120,15 +120,32 @@ export function HeroAnimation({
     
     switch (phase) {
       case 'intro':
-        // Intro: Chaos background with gentle movement
-        target = positionSets.scatter
-        progress = 1
-        particleColor = colors.chaosWarm
-        chaosOpacity = 0.3
+        // Intro: Chaos background, then start morphing to first product
+        const morphStartTime = timeline.intro - 1.2 // Start morphing 1.2s before end
         
-        // Gentle floating movement
-        if (pointsRef.current) {
-          pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.05
+        if (elapsed < morphStartTime) {
+          // Pure chaos phase
+          target = positionSets.scatter
+          progress = 1
+          particleColor = colors.chaosWarm
+          
+          // Gentle floating movement
+          if (pointsRef.current) {
+            pointsRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.05
+          }
+        } else {
+          // Morphing from chaos to first product
+          const morphElapsed = elapsed - morphStartTime
+          const morphProgress = easeInOutCubic(Math.min(morphElapsed / 1.2, 1))
+          
+          target = positionSets.products[0]
+          progress = morphProgress
+          particleColor = new THREE.Color().lerpColors(
+            colors.chaosWarm,
+            colors.offWhite,
+            morphProgress
+          )
+          shouldRotate = morphProgress > 0.5 // Start rotating when halfway morphed
         }
         
         if (elapsed > timeline.intro) {
@@ -140,42 +157,43 @@ export function HeroAnimation({
         break
         
       case 'cycling':
-        // Rapid product cycling: Check, check, check!
+        // Rapid product cycling: Products morph directly into each other
         const productElapsed = clock.elapsedTime - productStartTime.current
+        const nextProductIndex = (currentProductIndex + 1) % products.length
+        
+        // Check if we're in transformation phase (last part of product cycle)
+        const isTransforming = productElapsed > (timeline.productDuration - timeline.transformDuration)
         
         // Check if it's time to switch to next product
         if (productElapsed > timeline.productDuration) {
-          const nextProductIndex = (currentProductIndex + 1) % products.length
           setCurrentProductIndex(nextProductIndex)
           productStartTime.current = clock.elapsedTime
           onPhaseChange?.('cycling', nextProductIndex)
         }
         
-        // Animation: Transform in → Display → Transform out
-        const localElapsed = productElapsed
-        const transformIn = timeline.transformDuration
-        const displayTime = timeline.productDuration - transformIn
-        
-        if (localElapsed < transformIn) {
-          // Morphing from chaos to product
-          const morphT = easeInOutCubic(localElapsed / transformIn)
-          target = positionSets.products[currentProductIndex]
-          progress = morphT
-          particleColor = new THREE.Color().lerpColors(
-            colors.chaosWarm,
-            colors.offWhite,
-            morphT
-          )
-          chaosOpacity = 0.3 * (1 - morphT * 0.5) // Fade chaos slightly
-          productOpacity = morphT
+        if (isTransforming) {
+          // Morphing from current product to NEXT product
+          const transformElapsed = productElapsed - (timeline.productDuration - timeline.transformDuration)
+          const morphT = easeInOutCubic(transformElapsed / timeline.transformDuration)
+          
+          // Blend between current and next product
+          const currentTarget = positionSets.products[currentProductIndex]
+          const nextTarget = positionSets.products[nextProductIndex]
+          
+          // Create blended target positions
+          target = new Float32Array(pointCount * 3)
+          for (let i = 0; i < target.length; i++) {
+            target[i] = THREE.MathUtils.lerp(currentTarget[i], nextTarget[i], morphT)
+          }
+          
+          progress = 1 // We're manually blending, so set progress to 1
+          particleColor = colors.offWhite
           shouldRotate = true
         } else {
-          // Displaying product
+          // Holding current product
           target = positionSets.products[currentProductIndex]
           progress = 1
           particleColor = colors.offWhite
-          chaosOpacity = 0.2 // Subtle background chaos
-          productOpacity = 1
           shouldRotate = true
         }
         break
