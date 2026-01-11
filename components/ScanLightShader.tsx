@@ -19,7 +19,7 @@ export const scanLightFragmentShader = `
   uniform float uTime;
   uniform float uIntensity;
   uniform vec3 uColorCore;    // Bright white core
-  uniform vec3 uColorEdge;    // Blue-cyan edges
+  uniform vec3 uColorEdge;    // Blue-cyan edges (very subtle)
   uniform float uWidth;        // Width of the scan beam
   
   varying vec2 vUv;
@@ -29,32 +29,48 @@ export const scanLightFragmentShader = `
     // Distance from center of scan line (horizontal)
     float distFromCenter = abs(vUv.x - 0.5) * 2.0;
     
-    // Create smooth gradient falloff from center to edges
-    // Core is bright white, edges fade to blue
-    float coreMask = 1.0 - smoothstep(0.0, 0.15, distFromCenter);
-    float edgeMask = 1.0 - smoothstep(0.15, 1.0, distFromCenter);
+    // VERY TIGHT core - only the center line is bright white
+    float coreMask = 1.0 - smoothstep(0.0, 0.05, distFromCenter);
+    coreMask = pow(coreMask, 3.0); // Very sharp falloff
+    
+    // Minimal blue glow - barely visible
+    float glowMask = 1.0 - smoothstep(0.05, 0.15, distFromCenter);
+    glowMask = pow(glowMask, 4.0); // Extremely soft, fades very quickly
     
     // Vertical gradient (stronger at center, fades top/bottom)
     float verticalGradient = 1.0 - abs(vUv.y - 0.5) * 2.0;
-    verticalGradient = smoothstep(0.0, 0.5, verticalGradient);
+    verticalGradient = smoothstep(0.15, 0.65, verticalGradient);
     
-    // Combine gradients
-    float intensity = (coreMask + edgeMask * 0.6) * verticalGradient * uIntensity;
+    // Core is bright, glow is barely there
+    float coreIntensity = coreMask * verticalGradient * uIntensity;
+    float glowIntensity = glowMask * verticalGradient * uIntensity * 0.15; // Minimal glow
     
-    // Pulse effect
-    float pulse = 0.8 + 0.2 * sin(uTime * 3.0);
-    intensity *= pulse;
+    // Subtle pulse on core only
+    float pulse = 0.95 + 0.05 * sin(uTime * 3.0);
+    coreIntensity *= pulse;
     
-    // Color mixing: white core, blue edges
-    vec3 color = mix(uColorEdge, uColorCore, coreMask);
+    // Color: mostly white core, tiny hint of blue
+    vec3 coreColor = uColorCore * coreIntensity;
+    vec3 glowColor = uColorEdge * glowIntensity;
+    vec3 finalColor = coreColor + glowColor;
     
-    // Add subtle scan lines (like a real scanner)
-    float scanLines = sin(vUv.y * 100.0 + uTime * 10.0) * 0.5 + 0.5;
-    scanLines = mix(1.0, scanLines, 0.15); // Subtle effect
+    // Add very subtle scan lines only in core
+    float scanLines = sin(vUv.y * 140.0 + uTime * 8.0) * 0.5 + 0.5;
+    scanLines = mix(1.0, scanLines, coreMask * 0.08); // Extremely subtle
+    finalColor *= scanLines;
     
-    // Final color with alpha
-    vec3 finalColor = color * intensity * scanLines;
-    float alpha = intensity;
+    // Alpha: VERY tight falloff - only center is visible
+    float alpha = coreIntensity + glowIntensity * 0.3;
+    
+    // Hard cutoff for transparency - anything beyond 0.2 is invisible
+    if (distFromCenter > 0.2) {
+      discard; // Completely discard pixels outside core
+    }
+    
+    // Additional alpha threshold - if too dim, discard
+    if (alpha < 0.05) {
+      discard;
+    }
     
     gl_FragColor = vec4(finalColor, alpha);
   }

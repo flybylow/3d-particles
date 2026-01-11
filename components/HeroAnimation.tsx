@@ -4,6 +4,10 @@ import * as THREE from 'three'
 import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
+import {
+  scanLightVertexShader,
+  scanLightFragmentShader,
+} from './ScanLightShader'
 
 interface Product {
   name: string
@@ -109,12 +113,26 @@ export function HeroAnimation({
   const pointsRef = useRef<THREE.Points>(null)
   const materialRef = useRef<THREE.PointsMaterial>(null)
   const scanLightRef = useRef<THREE.Mesh>(null)
+  const scanGlowRef = useRef<THREE.Mesh>(null)
+  const scanShaderRef = useRef<THREE.ShaderMaterial>(null)
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
   const [phase, setPhase] = useState<'chaos' | 'failedScan' | 'scanning' | 'barcode' | 'holding' | 'transforming' | 'product'>('chaos')
   const phaseStartTime = useRef(0)
   const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
   const failedScanCount = useRef(0) // Track failed scan attempts
   const { clock } = useThree()
+  
+  // Shader uniforms for elegant scan light
+  const scanUniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uIntensity: { value: 0.8 },  // Less intense overall
+      uColorCore: { value: new THREE.Color(0xFFFFFF) },  // Bright white core
+      uColorEdge: { value: new THREE.Color(0x4CC9F0) },  // Blue-cyan edges (subtle)
+      uWidth: { value: 0.3 },
+    }),
+    []
+  )
   
   // Load both product models
   const wineBottle = useWineBottlePositions(pointCount)
@@ -306,10 +324,29 @@ export function HeroAnimation({
       materialRef.current.color.lerp(particleColor, delta * 3)
     }
     
-    // Update scan light position and visibility
-    if (scanLightRef.current) {
+    // Update shader time uniform for animation
+    if (scanShaderRef.current) {
+      scanShaderRef.current.uniforms.uTime.value = state.clock.elapsedTime
+    }
+    
+    // Update scan light position and visibility with elegant movement
+    if (scanLightRef.current && scanGlowRef.current) {
       scanLightRef.current.visible = scanLightVisible
+      scanGlowRef.current.visible = scanLightVisible
       scanLightRef.current.position.x = scanLightPosition
+      scanGlowRef.current.position.x = scanLightPosition
+      
+      // Vary intensity during failed scans vs successful scan
+      if (scanShaderRef.current) {
+        if (phase === 'failedScan') {
+          // Weaker, flickering during failed scans
+          const flicker = 0.4 + Math.random() * 0.2
+          scanShaderRef.current.uniforms.uIntensity.value = flicker
+        } else if (phase === 'scanning') {
+          // Bright but not overwhelming during successful scan
+          scanShaderRef.current.uniforms.uIntensity.value = 0.85
+        }
+      }
     }
     
     // Interpolate positions with staggered timing
@@ -391,15 +428,31 @@ export function HeroAnimation({
         />
       </points>
       
-      {/* Scan light - THE HERO MOMENT */}
-      <mesh ref={scanLightRef} visible={false}>
-        <planeGeometry args={[0.2, 3]} />
-        <meshBasicMaterial
-          color={colors.scanLight}
+      {/* Scan light - THE HERO MOMENT - Elegant shader-based */}
+      <mesh ref={scanLightRef} visible={false} position={[0, 0, 0.2]}>
+        <planeGeometry args={[0.25, 2.8]} />
+        <shaderMaterial
+          ref={scanShaderRef}
+          vertexShader={scanLightVertexShader}
+          fragmentShader={scanLightFragmentShader}
+          uniforms={scanUniforms}
           transparent
-          opacity={0.6}
           blending={THREE.AdditiveBlending}
           depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+      
+      {/* Scan glow halo - extremely subtle, almost invisible */}
+      <mesh ref={scanGlowRef} visible={false} position={[0, 0, 0.1]}>
+        <planeGeometry args={[0.3, 3.0]} />
+        <meshBasicMaterial
+          color="#4CC9F0"
+          transparent
+          opacity={0.02}
+          blending={THREE.AdditiveBlending}
+          depthWrite={false}
+          side={THREE.DoubleSide}
         />
       </mesh>
     </>
