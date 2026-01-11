@@ -40,25 +40,8 @@
   white-space: nowrap;
 }
 
-/* Product label - center bottom, above tagline */
-.product-label {
-  position: absolute;
-  bottom: 16%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-8px);
-  z-index: 10;
-  text-align: center;
-  opacity: 0;
-  transition: all 0.5s ease-out;
-  pointer-events: none;
-}
-
-.product-label.visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.product-label .product-category {
+/* Product label styles - now used in tagline */
+.hero-tagline .product-category {
   display: block;
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 11px;
@@ -69,7 +52,7 @@
   margin-bottom: 4px;
 }
 
-.product-label .product-name {
+.hero-tagline .product-name {
   display: block;
   font-family: 'Suisse Int\'l', 'Inter', system-ui, sans-serif;
   font-size: 14px;
@@ -101,38 +84,6 @@
   color: rgba(255, 255, 255, 0.5);
   letter-spacing: 0.02em;
   margin: 0;
-}
-
-/* EU Economy Stamp - appears during cycling phase */
-.eu-stamp {
-  position: absolute;
-  bottom: 10%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  text-align: center;
-  opacity: 0;
-  transition: opacity 0.6s ease-out;
-  pointer-events: none;
-}
-
-.eu-stamp.visible {
-  opacity: 1;
-}
-
-.eu-stamp span {
-  display: inline-block;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 6px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(4px);
 }
 
 /* Scroll indicator */
@@ -192,18 +143,8 @@
     line-height: 1.2;
   }
   
-  .product-label {
-    bottom: 18%;
-    padding: 0 24px;
-  }
-  
   .hero-tagline {
     bottom: 12%;
-    padding: 0 24px;
-  }
-  
-  .eu-stamp {
-    bottom: 8%;
     padding: 0 24px;
   }
   

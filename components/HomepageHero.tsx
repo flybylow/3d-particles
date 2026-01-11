@@ -92,20 +92,16 @@ export function HomepageHero() {
         <h1>{PHASES[phase as keyof typeof PHASES]?.headline || ''}</h1>
       </div>
       
-      {/* Product Label - Show during rapid cycling (check, check, check!) */}
-      <div className={`product-label ${phase === 'cycling' ? 'visible' : ''}`}>
-        <span className="product-category">{currentProduct.category}</span>
-        <span className="product-name">{currentProduct.name}</span>
-      </div>
-      
-      {/* Bottom tagline - Always visible */}
+      {/* Bottom tagline - Shows product info during cycling, otherwise main tagline */}
       <div className={`hero-tagline visible`}>
-        <p>Digital Product Passports</p>
-      </div>
-      
-      {/* EU Economy Stamp - Show during cycling phase (third step) */}
-      <div className={`eu-stamp ${phase === 'cycling' ? 'visible' : ''}`}>
-        <span>for the EU economy</span>
+        {phase === 'cycling' ? (
+          <>
+            <span className="product-category">{currentProduct.category}</span>
+            <span className="product-name">{currentProduct.name}</span>
+          </>
+        ) : (
+          <p>Digital Product Passports</p>
+        )}
       </div>
       
       {/* Scroll indicator */}
