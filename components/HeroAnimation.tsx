@@ -43,67 +43,78 @@ function generateScatterPositions(pointCount: number, spread: number = 2.5): Flo
   return new Float32Array(positions)
 }
 
-// Generate barcode positions (vertical bars) - DETERMINISTIC pattern
+// Generate barcode positions (vertical bars) - SIMPLE, CLEAN pattern
 function generateBarcodePositions(pointCount: number): Float32Array {
   const positions: number[] = []
   
   // Barcode dimensions (centered at origin)
   const width = 1.8 // Total width
   const height = 0.9 // Total height
-  const barCount = 40 // Number of vertical bars
-  const barWidth = width / barCount
+  const barCount = 30 // Fewer bars for cleaner look
+  const baseBarWidth = width / barCount
   
-  // DETERMINISTIC bar pattern (same every time) - alternating widths like real barcode
+  // Simple alternating pattern - thin/thick bars like real barcode
   const barWidths: number[] = []
-  const pattern = [1, 2, 1, 1, 3, 2, 1, 4, 2, 1, 1, 3, 1, 2, 1, 4, 1, 2, 3, 1, 2, 1, 1, 3, 2, 1, 4, 1, 2, 1, 3, 2, 1, 1, 4, 2, 1, 3, 1, 2]
   for (let i = 0; i < barCount; i++) {
-    barWidths.push(barWidth * pattern[i % pattern.length])
+    // Alternate between thin (1x) and thick (2x) bars
+    const width = (i % 3 === 0) ? baseBarWidth * 1.5 : baseBarWidth * 1.0
+    barWidths.push(width)
   }
   
-  // Calculate total width with varying bar widths
+  // Calculate total width
   const totalWidth = barWidths.reduce((sum, w) => sum + w, 0)
   let currentX = -totalWidth / 2
   
-  // Distribute points across bars - SHARP, DEFINED bars
+  // Track which bar each particle belongs to (for explosion animation)
+  const barIndices: number[] = []
+  
+  // Distribute points across bars - CLEAN, UNIFORM distribution
   for (let barIndex = 0; barIndex < barCount; barIndex++) {
     const barWidth = barWidths[barIndex]
     const barX = currentX + barWidth / 2
-    const pointsPerBar = Math.floor((pointCount / barCount) * (barWidth / barWidths[0]))
+    const pointsPerBar = Math.floor(pointCount / barCount)
     
-    // Create sharp, defined bars (less random distribution, more uniform)
+    // Create clean, uniform bars
     for (let i = 0; i < pointsPerBar; i++) {
-      // More uniform distribution for sharper bars
-      const u = i / pointsPerBar // 0 to 1
-      const v = (i % 10) / 10 // For vertical distribution
+      // Grid-like distribution for sharp bars
+      const gridSize = Math.ceil(Math.sqrt(pointsPerBar))
+      const col = i % gridSize
+      const row = Math.floor(i / gridSize)
       
-      const x = barX + (u - 0.5) * barWidth * 0.6 // Tighter distribution (0.6 instead of 0.8)
-      const y = (v - 0.5) * height * 0.9 // More organized vertical distribution
-      const z = (Math.random() - 0.5) * 0.05 // Less depth for sharper look
+      const u = col / gridSize // 0 to 1
+      const v = row / gridSize // 0 to 1
+      
+      const x = barX + (u - 0.5) * barWidth * 0.9 // Tighter, more uniform
+      const y = (v - 0.5) * height * 0.9
+      const z = 0 // No depth for flat barcode
       
       positions.push(x, y, z)
+      barIndices.push(barIndex) // Track which bar this particle belongs to
     }
     
     currentX += barWidth
   }
   
-  // Fill remaining points if needed
+  // Fill remaining points
   while (positions.length / 3 < pointCount) {
     const barIndex = Math.floor((positions.length / 3) % barCount)
     const barWidth = barWidths[barIndex]
     const barX = -totalWidth / 2 + barWidths.slice(0, barIndex).reduce((sum, w) => sum + w, 0) + barWidth / 2
     
-    const u = Math.random()
-    const v = Math.random()
-    const x = barX + (u - 0.5) * barWidth * 0.6
-    const y = (v - 0.5) * height * 0.9
-    const z = (Math.random() - 0.5) * 0.05
+    const x = barX + (Math.random() - 0.5) * barWidth * 0.9
+    const y = (Math.random() - 0.5) * height * 0.9
+    const z = 0
     
     positions.push(x, y, z)
+    barIndices.push(barIndex)
   }
   
   // Trim to exact point count
   return new Float32Array(positions.slice(0, pointCount * 3))
 }
+
+// Store bar indices for explosion animation (global for now, will move to component)
+let barcodeBarIndices: number[] = []
 
 // Easing function for smoother animation
 function easeInOutCubic(t: number): number {
@@ -135,10 +146,12 @@ export function HeroAnimation({
     []
   )
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
-  const [phase, setPhase] = useState<'intro' | 'barcode' | 'cycling'>('intro')
+  const [phase, setPhase] = useState<'intro' | 'barcode' | 'exploding' | 'cycling'>('intro')
   const phaseStartTime = useRef(0)
   const productStartTime = useRef(0) // Track when current product started
   const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
+  const scanStartTime = useRef(0) // Track when scan starts (one-time only)
+  const explosionStartTime = useRef(0) // Track when explosion starts
   const { clock } = useThree()
   
   // Load all product models
@@ -162,10 +175,11 @@ export function HeroAnimation({
   }, [pointCount, products, wineBottle, battery, tshirt])
   
   // Timeline configuration (in seconds)
-  // Flow: Intro (chaos) → Barcode → Product cycling
+  // Flow: Intro (chaos) → Barcode (one scan) → Explosion (bar for bar) → Product cycling
   const timeline = {
-    intro: 3.5,              // 0-3.5s: Intro with chaos, scan line, text appears
-    barcode: 2.0,            // 3.5-5.5s: Barcode formation and hold
+    intro: 1.0,              // 0-1s: Brief intro
+    barcode: 3.0,            // 1-4s: Barcode visible, ONE scan
+    exploding: 2.0,          // 4-6s: Bars explode one by one
     productDuration: 2.5,    // Time to show each product (transform + display)
     transformDuration: 1.0   // Time to morph between products
   }
@@ -185,8 +199,29 @@ export function HeroAnimation({
   
   // Barcode positions (already formed, static from start)
   const barcodePositions = useMemo(() => {
-    return positionSets.barcode.slice()
-  }, [positionSets])
+    const positions = positionSets.barcode.slice()
+    // Generate bar indices for explosion animation
+    barcodeBarIndices = []
+    const barCount = 30
+    const pointsPerBar = Math.floor(pointCount / barCount)
+    for (let i = 0; i < pointCount; i++) {
+      barcodeBarIndices.push(Math.floor(i / pointsPerBar))
+    }
+    return positions
+  }, [positionSets, pointCount])
+  
+  // Target positions for explosion (scattered)
+  const explosionTargets = useMemo(() => {
+    const targets = new Float32Array(pointCount * 3)
+    for (let i = 0; i < pointCount; i++) {
+      const angle = Math.random() * Math.PI * 2
+      const radius = 1.5 + Math.random() * 2.0
+      targets[i * 3] = Math.cos(angle) * radius
+      targets[i * 3 + 1] = (Math.random() - 0.5) * 2.0
+      targets[i * 3 + 2] = Math.sin(angle) * radius
+    }
+    return targets
+  }, [pointCount])
   
   // Phase management
   useEffect(() => {
@@ -297,17 +332,80 @@ export function HeroAnimation({
         break
         
       case 'barcode':
-        // Barcode phase: Barcode already formed, wait for scan
-        // Barcode particles are static (already visible from start)
+        // Barcode phase: Barcode visible, ONE scan happens
         target = positionSets.scatter // Keep chaos particles as background
         progress = 1
         particleColor = colors.chaosWarm
         
-        // Hide scan line after barcode phase completes
+        // After scan completes, start explosion
         if (elapsed > timeline.barcode) {
-          if (scanLineRef.current) {
-            scanLineRef.current.visible = false
+          explosionStartTime.current = clock.elapsedTime
+          setPhase('exploding')
+          onPhaseChange?.('exploding', 0)
+        }
+        break
+        
+      case 'exploding':
+        // Explosion phase: Bars explode one by one
+        const explosionElapsed = clock.elapsedTime - explosionStartTime.current
+        const barCount = 30
+        const barsPerSecond = barCount / timeline.exploding // Bars per second
+        
+        // Calculate which bars should be exploding
+        if (barcodePointsRef.current && barcodeMaterialRef.current) {
+          const barcodePositions = barcodePointsRef.current.geometry.attributes.position.array as Float32Array
+          const explosionPositions = new Float32Array(barcodePositions.length)
+          
+          for (let i = 0; i < pointCount; i++) {
+            const barIndex = barcodeBarIndices[i] || 0
+            const barExplodeTime = barIndex / barsPerSecond // Time when this bar starts exploding
+            
+            if (explosionElapsed >= barExplodeTime) {
+              // This bar is exploding - move to explosion target
+              const explodeProgress = Math.min((explosionElapsed - barExplodeTime) / 0.15, 1.0) // 0.15s per bar
+              const eased = easeInOutCubic(explodeProgress)
+              
+              explosionPositions[i * 3] = THREE.MathUtils.lerp(
+                barcodePositions[i * 3],
+                explosionTargets[i * 3],
+                eased
+              )
+              explosionPositions[i * 3 + 1] = THREE.MathUtils.lerp(
+                barcodePositions[i * 3 + 1],
+                explosionTargets[i * 3 + 1],
+                eased
+              )
+              explosionPositions[i * 3 + 2] = THREE.MathUtils.lerp(
+                barcodePositions[i * 3 + 2],
+                explosionTargets[i * 3 + 2],
+                eased
+              )
+            } else {
+              // This bar hasn't exploded yet - keep barcode position
+              explosionPositions[i * 3] = barcodePositions[i * 3]
+              explosionPositions[i * 3 + 1] = barcodePositions[i * 3 + 1]
+              explosionPositions[i * 3 + 2] = barcodePositions[i * 3 + 2]
+            }
           }
+          
+          // Update positions
+          const positionsAttr = barcodePointsRef.current.geometry.attributes.position
+          for (let i = 0; i < explosionPositions.length; i++) {
+            positionsAttr.array[i] = explosionPositions[i]
+          }
+          positionsAttr.needsUpdate = true
+          
+          // Fade out as explosion progresses
+          const fadeProgress = Math.min(explosionElapsed / timeline.exploding, 1.0)
+          barcodeMaterialRef.current.opacity = 0.9 * (1.0 - fadeProgress)
+        }
+        
+        target = positionSets.scatter // Chaos particles in background
+        progress = 1
+        particleColor = colors.chaosWarm
+        
+        // After explosion completes, start product cycling
+        if (explosionElapsed > timeline.exploding) {
           setPhase('cycling')
           productStartTime.current = clock.elapsedTime
           setCurrentProductIndex(0)
