@@ -1,0 +1,196 @@
+/* Product Info Tile - Starts in grid, flies forward */
+.product-info-tile {
+  position: fixed;
+  bottom: 15%;
+  z-index: 100;
+  width: 70px;
+  height: 70px;
+  opacity: 0;
+  pointer-events: none;
+  transform-style: preserve-3d;
+  perspective: 1500px;
+  transform-origin: center center;
+}
+
+.product-info-tile.left {
+  left: 10%;
+}
+
+.product-info-tile.right {
+  right: 10%;
+  left: auto;
+}
+
+.product-info-tile.visible {
+  opacity: 1;
+  width: 320px;
+  height: auto;
+  min-height: 240px;
+  transform: rotateX(0deg) translateY(0) translateZ(500px) scale(1) rotateY(0deg);
+}
+
+/* Animations removed - instant appearance */
+
+/* Animation keyframes removed */
+
+.tile-background {
+  position: absolute;
+  inset: 0;
+  background: #2A2A2A;
+  border: 1px solid rgba(136, 146, 125, 0.4);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 
+    0 0 40px rgba(136, 146, 125, 0.3),
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+}
+
+.tile-pattern {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(136, 146, 125, 0.03) 2px,
+      rgba(136, 146, 125, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(136, 146, 125, 0.03) 2px,
+      rgba(136, 146, 125, 0.03) 4px
+    );
+  opacity: 0.5;
+}
+
+.tile-content {
+  position: relative;
+  z-index: 1;
+  padding: 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  opacity: 1;
+  transform: scale(1);
+}
+
+.tile-category {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(136, 146, 125, 0.8);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  opacity: 1;
+}
+
+.tile-name {
+  font-family: 'Suisse Int\'l', 'Inter', system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 500;
+  color: #F8F8F7;
+  letter-spacing: -0.02em;
+  margin-bottom: 12px;
+  line-height: 1.2;
+  opacity: 1;
+}
+
+.tile-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  margin-bottom: 8px;
+  opacity: 1;
+}
+
+.info-label {
+  font-weight: 500;
+  color: rgba(248, 248, 247, 0.5);
+  min-width: 60px;
+}
+
+.info-value {
+  font-weight: 400;
+  color: rgba(248, 248, 247, 0.9);
+  flex: 1;
+}
+
+.tile-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(248, 248, 247, 0.9);
+  margin-top: 12px;
+  margin-bottom: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(136, 146, 125, 0.2);
+  opacity: 1;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #88927D;
+  box-shadow: 0 0 8px rgba(136, 146, 125, 0.6);
+}
+
+.tile-certifications {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  opacity: 1;
+}
+
+.cert-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(136, 146, 125, 0.9);
+  background: rgba(136, 146, 125, 0.1);
+  border: 1px solid rgba(136, 146, 125, 0.3);
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+
+
+/* Responsive */
+@media (max-width: 768px) {
+  .product-info-tile {
+    width: 280px;
+    min-height: 200px;
+    bottom: 12%;
+  }
+  
+  .product-info-tile.left {
+    left: 5%;
+  }
+  
+  .product-info-tile.right {
+    right: 5%;
+  }
+  
+  .tile-content {
+    padding: 20px;
+  }
+  
+  .tile-name {
+    font-size: 20px;
+  }
+}

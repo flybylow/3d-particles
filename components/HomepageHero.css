@@ -4,13 +4,14 @@
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background: #08080c;
+  background: #1A1A1A;
 }
 
 .hero-canvas {
   position: absolute;
   inset: 0;
   z-index: 1;
+  background: transparent;
 }
 
 /* Main headline */

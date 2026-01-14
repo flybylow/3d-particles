@@ -18,6 +18,8 @@ interface HeroAnimationProps {
   pointCount?: number
   pointSize?: number
   onPhaseChange?: (phase: string, productIndex: number) => void
+  onTransitionStart?: () => void
+  onTransitionEnd?: () => void
 }
 
 // Generate scattered positions
@@ -43,37 +45,29 @@ function generateScatterPositions(pointCount: number, spread: number = 2.5): Flo
 function generateBarcodePositions(pointCount: number): Float32Array {
   const positions: number[] = []
   
-  // Barcode dimensions (centered at origin) - larger and clearer
-  const width = 2.4 // Increased total width for better visibility
-  const height = 1.2 // Increased height for better proportions
-  const barCount = 25 // Fewer bars for cleaner look (was 30)
+  const width = 2.4
+  const height = 1.2
+  const barCount = 25
   const baseBarWidth = width / barCount
   
-  // Simple alternating pattern - thin/thick bars like real barcode
   const barWidths: number[] = []
   for (let i = 0; i < barCount; i++) {
-    // More distinct pattern: thin (1x) and thick (2x) bars
     const barWidth = (i % 3 === 0) ? baseBarWidth * 2.0 : baseBarWidth * 1.0
     barWidths.push(barWidth)
   }
   
-  // Calculate total width
   const totalWidth = barWidths.reduce((sum, w) => sum + w, 0)
   let currentX = -totalWidth / 2
   
-  // Distribute points across bars - tighter distribution for sharper bars
   for (let barIndex = 0; barIndex < barCount; barIndex++) {
     const barWidth = barWidths[barIndex]
     const barX = currentX + barWidth / 2
     const pointsPerBar = Math.floor(pointCount / barCount)
     
-    // Create clean, uniform bars with tighter distribution
     for (let i = 0; i < pointsPerBar; i++) {
-      // Tighter X distribution (0.6 instead of 0.8) for sharper bars
       const x = barX + (Math.random() - 0.5) * barWidth * 0.6
-      // Full height coverage
       const y = (Math.random() - 0.5) * height * 0.95
-      const z = 0 // Flat barcode
+      const z = 0
       
       positions.push(x, y, z)
     }
@@ -81,7 +75,6 @@ function generateBarcodePositions(pointCount: number): Float32Array {
     currentX += barWidth
   }
   
-  // Fill remaining points
   while (positions.length / 3 < pointCount) {
     const barIndex = Math.floor((positions.length / 3) % barCount)
     const barWidth = barWidths[barIndex]
@@ -106,20 +99,20 @@ export function HeroAnimation({
   products,
   pointCount = 18000,
   pointSize = 0.008,
-  onPhaseChange
+  onPhaseChange,
+  onTransitionStart,
+  onTransitionEnd
 }: HeroAnimationProps) {
-  const pointsRef = useRef<THREE.Points>(null) // Chaos particles (background)
+  const pointsRef = useRef<THREE.Points>(null) // Single particle system
   const materialRef = useRef<THREE.PointsMaterial>(null)
-  const barcodePointsRef = useRef<THREE.Points>(null) // Barcode particles (foreground, on top)
-  const barcodeMaterialRef = useRef<THREE.PointsMaterial>(null)
   const scanLineRef = useRef<THREE.Group>(null)
   const scanMaterialRef = useRef<InstanceType<typeof ElectricScanMaterial>>(null)
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
-  const [phase, setPhase] = useState<'intro' | 'cycling'>('intro')
+  const [phase, setPhase] = useState<'intro' | 'preload' | 'cycling'>('intro')
   const phaseStartTime = useRef(0)
   const productStartTime = useRef(0) // Track when current product started
-  const rotationAngle = useRef(0) // Track rotation angle for center-axis rotation
-  const { clock } = useThree()
+  const rotationAngle = useRef(0) // Track rotation angle for products
+  const { camera, clock } = useThree()
   
   // Load all product models
   const wineBottle = useWineBottlePositions(pointCount)
@@ -141,33 +134,52 @@ export function HeroAnimation({
     return { scatter, barcode, products: productPositions }
   }, [pointCount, products, wineBottle, battery, tshirt])
   
-  // Barcode positions (static, visible from start)
-  const barcodePositions = useMemo(() => {
-    return positionSets.barcode.slice()
-  }, [positionSets])
-  
-  // Create electric scan material instance (once)
-  const electricScanMaterial = useMemo(() => new ElectricScanMaterial(), [])
-  
-  // Bar count constant (matches generateBarcodePositions)
-  const BAR_COUNT = 25
-  
-  // Map particles to their bar index (for per-bar scaling animation)
-  const barcodeBarIndices = useMemo(() => {
-    const indices: number[] = []
-    const pointsPerBar = Math.floor(pointCount / BAR_COUNT)
-    for (let i = 0; i < pointCount; i++) {
-      indices.push(Math.min(Math.floor(i / pointsPerBar), BAR_COUNT - 1))
+  // Track which bar each particle belongs to (for bar-by-bar animation)
+  const barIndices = useMemo(() => {
+    const indices = new Uint8Array(pointCount)
+    const barCount = 25
+    const pointsPerBar = Math.floor(pointCount / barCount)
+    
+    for (let barIndex = 0; barIndex < barCount; barIndex++) {
+      const startIdx = barIndex * pointsPerBar
+      const endIdx = Math.min(startIdx + pointsPerBar, pointCount)
+      for (let i = startIdx; i < endIdx; i++) {
+        indices[i] = barIndex
+      }
+    }
+    // Fill remaining particles
+    for (let i = barCount * pointsPerBar; i < pointCount; i++) {
+      indices[i] = Math.floor((i / pointsPerBar) % barCount)
     }
     return indices
   }, [pointCount])
   
-  // Timeline configuration (in seconds) - RAPID PRODUCT CYCLING
-  // Flow: Chaos background → "Scan any product" → Rapid product cycling
+  // Calculate barcode width for scanline positioning
+  const barcodeWidth = useMemo(() => {
+    const width = 2.4
+    const barCount = 25
+    const baseBarWidth = width / barCount
+    const barWidths: number[] = []
+    for (let i = 0; i < barCount; i++) {
+      const barWidth = (i % 3 === 0) ? baseBarWidth * 2.0 : baseBarWidth * 1.0
+      barWidths.push(barWidth)
+    }
+    return barWidths.reduce((sum, w) => sum + w, 0)
+  }, [])
+  
+  // Create electric scan material instance (once)
+  const electricScanMaterial = useMemo(() => {
+    const material = new ElectricScanMaterial()
+    return material
+  }, [])
+  
+  // Timeline configuration (in seconds)
   const timeline = {
-    intro: 3.5,              // 0-3.5s: Intro with chaos, text appears
-    productDuration: 2.5,    // Time to show each product (transform + display)
-    transformDuration: 1.0   // Time to morph between products
+    intro: 3.5,                    // Intro: orange particles, scan moves
+    scanMoveTime: 2.0,              // Time for scan to move
+    preload: 4.0,                   // Show first product with panels
+    productDuration: 6.0,           // Show each product
+    transformDuration: 1.5          // Morph between products
   }
   
   // Color states for emotional journey
@@ -186,7 +198,27 @@ export function HeroAnimation({
   // Phase management
   useEffect(() => {
     phaseStartTime.current = clock.elapsedTime
-  }, [phase, clock])
+    if (scanLineRef.current) {
+      scanLineRef.current.position.set(-barcodeWidth / 2, 0, 0)
+      scanLineRef.current.visible = phase === 'intro' || phase === 'preload'
+    }
+    // Reset camera position on phase change
+    if (phase === 'intro') {
+      camera.position.z = 5.5
+      camera.updateProjectionMatrix()
+    }
+  }, [phase, clock, camera, barcodeWidth])
+  
+  // Auto-transition from loading to intro
+  useEffect(() => {
+    if (phase === 'loading') {
+      const timer = setTimeout(() => {
+        setPhase('intro')
+        phaseStartTime.current = clock.elapsedTime
+      }, timeline.loading * 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [phase, clock, timeline.loading])
   
   // Main animation loop
   useFrame((state, delta) => {
@@ -195,154 +227,160 @@ export function HeroAnimation({
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
     const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
     
-    // Update scan line position during intro phase and barcode bar scaling
-    let scanLineX = 0
+    // No camera zoom - keep camera position fixed
+    
+    // Update scan line position - moves across barcode width, fades out after scanning
     if (phase === 'intro' && scanLineRef.current) {
-      const morphStartTime = timeline.intro - 1.2
-      if (elapsed < morphStartTime) {
-        // Scan line sweeps across during chaos phase
-        const scanProgress = (elapsed % 2.5) / 2.5 // 2.5 second sweep cycle
-        scanLineX = -3 + (scanProgress * 6) // Sweep from -3 to 3
-        scanLineRef.current.position.x = scanLineX
+      const holdTime = 0.3 // Hold briefly after reaching end
+      const fadeOutStart = timeline.scanMoveTime + holdTime // Start fading after brief hold
+      const fadeOutDuration = 0.6 // Fade duration
+      const fadeOutEnd = fadeOutStart + fadeOutDuration
+      
+      if (elapsed < timeline.scanMoveTime) {
+        // Scan line moves from left edge to right edge of barcode
+        const scanProgress = easeInOutCubic(elapsed / timeline.scanMoveTime)
+        const barcodeLeft = -barcodeWidth / 2
+        const barcodeRight = barcodeWidth / 2
+        const scanLineX = barcodeLeft + (scanProgress * (barcodeRight - barcodeLeft))
+        scanLineRef.current.position.set(scanLineX, 0, 0)
         scanLineRef.current.visible = true
         
-        // Update shader uniforms for electric effect
         if (scanMaterialRef.current) {
           scanMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime
           scanMaterialRef.current.uniforms.uIntensity.value = 1.0
         }
+      } else if (elapsed < fadeOutStart) {
+        // Scan line stops at right edge of barcode, hold briefly
+        scanLineRef.current.position.set(barcodeWidth / 2, 0, 0)
+        scanLineRef.current.visible = true
         
-        // Calculate barcode dimensions for bar mapping
-        const barcodeWidth = 2.4
-        const barcodeBarWidth = barcodeWidth / BAR_COUNT
-        const barcodeLeft = -barcodeWidth / 2
+        if (scanMaterialRef.current) {
+          scanMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime
+          scanMaterialRef.current.uniforms.uIntensity.value = 1.0
+        }
+      } else if (elapsed < fadeOutEnd) {
+        // Fade out scanline completely
+        const fadeProgress = (elapsed - fadeOutStart) / fadeOutDuration
+        scanLineRef.current.position.set(barcodeWidth / 2, 0, 0)
+        scanLineRef.current.visible = true
         
-        // Scale bars as scan line passes (bars grow one-by-one by expanding positions)
-        if (barcodePointsRef.current && barcodeMaterialRef.current) {
-          const barcodeGeometry = barcodePointsRef.current.geometry
-          const barcodePosArray = barcodeGeometry.attributes.position.array as Float32Array
-          
-          // Store original positions if not already stored
-          if (!barcodeGeometry.userData.originalPositions) {
-            barcodeGeometry.userData.originalPositions = new Float32Array(barcodePositions)
-          }
-          const originalPositions = barcodeGeometry.userData.originalPositions
-          
-          // Update positions to scale bars as scan line passes
-          for (let i = 0; i < pointCount; i++) {
-            const barIndex = barcodeBarIndices[i]
-            const barLeft = barcodeLeft + (barIndex * barcodeBarWidth)
-            const barRight = barLeft + barcodeBarWidth
-            const barCenter = (barLeft + barRight) / 2
-            
-            // Distance from scan line to bar center
-            const distFromScan = Math.abs(scanLineX - barCenter)
-            const barWidth = barcodeBarWidth
-            
-            // Grow bar when scan line is near (expand horizontally)
-            if (distFromScan < barWidth * 2.0) {
-              // Scale factor: max when scan line is at bar center, falls off with distance
-              const scaleFactor = 1.0 - (distFromScan / (barWidth * 2.0))
-              const scale = 1.0 + (scaleFactor * 2.0) // Grow up to 3x width
-              
-              // Scale particle X position around bar center
-              const origX = originalPositions[i * 3]
-              const offsetX = origX - barCenter
-              barcodePosArray[i * 3] = barCenter + offsetX * scale
-              
-              // Also scale Y slightly for vertical growth effect
-              const origY = originalPositions[i * 3 + 1]
-              barcodePosArray[i * 3 + 1] = origY * (1.0 + scaleFactor * 0.5)
-            } else {
-              // Reset to original position
-              barcodePosArray[i * 3] = originalPositions[i * 3]
-              barcodePosArray[i * 3 + 1] = originalPositions[i * 3 + 1]
-            }
-            // Z stays the same
-            barcodePosArray[i * 3 + 2] = originalPositions[i * 3 + 2]
-          }
-          
-          barcodeGeometry.attributes.position.needsUpdate = true
-          
-          // Keep barcode visible during scaling
-          barcodeMaterialRef.current.opacity = 0.92
+        if (scanMaterialRef.current) {
+          scanMaterialRef.current.uniforms.uTime.value = state.clock.elapsedTime
+          scanMaterialRef.current.uniforms.uIntensity.value = 1.0 * (1 - fadeProgress) // Fade from 1.0 to 0
         }
       } else {
-        // Hide scan line when morphing to product
+        // Completely hidden after fade out
         scanLineRef.current.visible = false
-        // Hide barcode
-        if (barcodeMaterialRef.current) {
-          barcodeMaterialRef.current.opacity = 0
+        if (scanMaterialRef.current) {
+          scanMaterialRef.current.uniforms.uIntensity.value = 0
         }
       }
     } else {
-      // Hide scan line and barcode in other phases
+      // Hide scanline in all other phases
       if (scanLineRef.current) {
         scanLineRef.current.visible = false
-      }
-      if (barcodeMaterialRef.current) {
-        barcodeMaterialRef.current.opacity = 0
+        if (scanMaterialRef.current) {
+          scanMaterialRef.current.uniforms.uIntensity.value = 0
+        }
       }
     }
     
-    // NEW FLOW: Chaos background → Rapid product cycling
-    let target: Float32Array
+    // Simple flow: Orange particles → Scanline → Products
+    let target: Float32Array = positionSets.scatter
     let progress = 0
     let shouldRotate = false
-    let particleColor = colors.offWhite
-    let chaosOpacity = 0.4 // Background chaos particles
-    let productOpacity = 0 // Center product particles
+    let particleColor = colors.chaosWarm
+    let chaosOpacity = 0.6
     
     switch (phase) {
       case 'intro':
-        // Intro: Chaos background, then start morphing to first product
-        const morphStartTime = timeline.intro - 1.2 // Start morphing 1.2s before end
+        // Intro: Bars fly in one by one from scatter, scanline animates over barcode, then morphs to product
+        // Scanline completes at timeline.scanMoveTime (2.0s), then holds briefly, then fades out
+        // Product morph starts after scanline finishes
+        const barFlyInDuration = 1.2 // Time for all bars to fly in
+        const scanCompleteTime = timeline.scanMoveTime + 0.3 // Scan completes + brief hold
+        const productMorphStart = scanCompleteTime + 0.2 // Start morphing after scanline completes
+        const productMorphDuration = Math.max(0.1, timeline.intro - productMorphStart)
         
-        if (elapsed < morphStartTime) {
-          // Pure chaos phase - nervous/jittery particles
-          target = positionSets.scatter
-          progress = 1
-          particleColor = colors.chaosWarm
-          
-          // Continuous rotation and drift for nervous movement
-          if (pointsRef.current) {
-            pointsRef.current.rotation.y = state.clock.elapsedTime * 0.1
-            pointsRef.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.3) * 0.05
-          }
+        if (elapsed < productMorphStart) {
+          // Bars fly in one by one from scatter to barcode positions
+          // Each bar animates individually with staggered timing
+          target = positionSets.barcode
+          // Progress will be handled per-bar in the interpolation loop
+          progress = 1 // Base progress - bars will animate individually
+          particleColor = colors.offWhite
+          chaosOpacity = 0.92
         } else {
-          // Morphing from chaos to first product
-          const morphElapsed = elapsed - morphStartTime
-          const morphProgress = easeInOutCubic(Math.min(morphElapsed / 1.2, 1))
-          
-          target = positionSets.products[0]
-          progress = morphProgress
-          particleColor = new THREE.Color().lerpColors(
-            colors.chaosWarm,
-            colors.offWhite,
-            morphProgress
-          )
-          shouldRotate = morphProgress > 0.5 // Start rotating when halfway morphed
-          // Apply Y offset during morphing too to prevent jump
-          // The Y offset will be applied in the interpolation loop
+          // Bar-by-bar explosion from barcode to product (after scanline completes)
+          // Each bar explodes individually into product positions
+          target = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.barcode
+          progress = 1 // Base progress - bars will explode individually
+          particleColor = colors.offWhite
+          chaosOpacity = 0.92
+          shouldRotate = false // No rotation during explosion
         }
         
         if (elapsed > timeline.intro) {
+          setPhase('preload')
+          phaseStartTime.current = clock.elapsedTime
+          setCurrentProductIndex(0)
+          onPhaseChange?.('preload', 0)
+        }
+        break
+        
+      case 'preload':
+        // Preload: Show bottle, then morph to battery
+        const bottleHoldTime = 2.0
+        const batteryMorphDuration = timeline.preload - bottleHoldTime
+        
+        if (elapsed < bottleHoldTime) {
+          // Hold bottle
+          target = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.scatter
+          progress = 1
+          particleColor = colors.offWhite
+          chaosOpacity = 0.92
+          shouldRotate = true
+        } else {
+          // Morph bottle to battery - trigger transition start
+          if (elapsed - bottleHoldTime < 0.1) {
+            onTransitionStart?.()
+          }
+          
+          const batteryMorphElapsed = elapsed - bottleHoldTime
+          const batteryMorphProgress = easeInOutCubic(Math.min(batteryMorphElapsed / batteryMorphDuration, 1))
+          
+          const bottleTarget = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.scatter
+          const batteryTarget = (positionSets.products && positionSets.products[1]) ? positionSets.products[1] : positionSets.scatter
+          
+          target = new Float32Array(pointCount * 3)
+          for (let i = 0; i < target.length; i++) {
+            target[i] = THREE.MathUtils.lerp(bottleTarget[i] ?? 0, batteryTarget[i] ?? 0, batteryMorphProgress)
+          }
+          progress = 1
+          particleColor = colors.offWhite
+          chaosOpacity = 0.92
+          shouldRotate = true
+          
+          // Trigger transition end when morph completes
+          if (batteryMorphProgress >= 0.95) {
+            onTransitionEnd?.()
+          }
+        }
+        
+        if (elapsed > timeline.preload) {
           setPhase('cycling')
           productStartTime.current = clock.elapsedTime
-          setCurrentProductIndex(0)
-          onPhaseChange?.('cycling', 0)
+          setCurrentProductIndex(1) // Now showing battery
+          onPhaseChange?.('cycling', 1)
         }
         break
         
       case 'cycling':
-        // Rapid product cycling: Products morph directly into each other
+        // Cycling: Cycle through products
         const productElapsed = clock.elapsedTime - productStartTime.current
         const nextProductIndex = (currentProductIndex + 1) % products.length
-        
-        // Check if we're in transformation phase (last part of product cycle)
         const isTransforming = productElapsed > (timeline.productDuration - timeline.transformDuration)
         
-        // Check if it's time to switch to next product
         if (productElapsed > timeline.productDuration) {
           setCurrentProductIndex(nextProductIndex)
           productStartTime.current = clock.elapsedTime
@@ -350,28 +388,33 @@ export function HeroAnimation({
         }
         
         if (isTransforming) {
-          // Morphing from current product to NEXT product
+          // Trigger transition start when morphing begins
           const transformElapsed = productElapsed - (timeline.productDuration - timeline.transformDuration)
-          const morphT = easeInOutCubic(transformElapsed / timeline.transformDuration)
-          
-          // Blend between current and next product
-          const currentTarget = positionSets.products[currentProductIndex]
-          const nextTarget = positionSets.products[nextProductIndex]
-          
-          // Create blended target positions
-          target = new Float32Array(pointCount * 3)
-          for (let i = 0; i < target.length; i++) {
-            target[i] = THREE.MathUtils.lerp(currentTarget[i], nextTarget[i], morphT)
+          if (transformElapsed < 0.1) {
+            onTransitionStart?.()
           }
           
-          progress = 1 // We're manually blending, so set progress to 1
-          particleColor = colors.offWhite
-          shouldRotate = true
-        } else {
-          // Holding current product
-          target = positionSets.products[currentProductIndex]
+          const morphT = easeInOutCubic(transformElapsed / timeline.transformDuration)
+          const currentTarget = (positionSets.products && positionSets.products[currentProductIndex]) ? positionSets.products[currentProductIndex] : positionSets.scatter
+          const nextTarget = (positionSets.products && positionSets.products[nextProductIndex]) ? positionSets.products[nextProductIndex] : positionSets.scatter
+          target = new Float32Array(pointCount * 3)
+          for (let i = 0; i < target.length; i++) {
+            target[i] = THREE.MathUtils.lerp(currentTarget[i] ?? 0, nextTarget[i] ?? 0, morphT)
+          }
           progress = 1
           particleColor = colors.offWhite
+          chaosOpacity = 0.92
+          shouldRotate = true
+          
+          // Trigger transition end when morph completes
+          if (morphT >= 0.95) {
+            onTransitionEnd?.()
+          }
+        } else {
+          target = (positionSets.products && positionSets.products[currentProductIndex]) ? positionSets.products[currentProductIndex] : positionSets.scatter
+          progress = 1
+          particleColor = colors.offWhite
+          chaosOpacity = 0.92
           shouldRotate = true
         }
         break
@@ -381,38 +424,111 @@ export function HeroAnimation({
         progress = 1
     }
     
-    // Update particle color
+    // Update particle color and opacity
     if (materialRef.current) {
       materialRef.current.color.lerp(particleColor, delta * 3)
-      // Update opacity based on phase
-      materialRef.current.opacity = phase === 'intro' ? chaosOpacity : 0.92
+      materialRef.current.opacity = chaosOpacity
     }
     
     // Interpolate positions with staggered timing
-    // Apply uniform Y offset for products (all objects centered at origin by default)
-    const productYOffset = -0.5 // Vertical position adjustment for larger products (moved up from -1.2 to -1.0 to -0.5)
+    // Apply uniform Y offset and scale for products (all objects centered at origin by default)
+    const productYOffset = -0.3 // Vertical position adjustment (moved up)
+    const productScale = 0.85 // Scale for products (increased since camera is further away)
+    
+    // Safety check: ensure target is defined and has correct length
+    if (!target || target.length !== positions.length) {
+      target = positionSets.scatter
+    }
+    
+    // Bar-by-bar animation for intro phase
+    const barFlyInDuration = 1.2
+    const barCount = 25
+    const barDelay = barFlyInDuration / barCount // Delay between each bar
+    
+    // Calculate explosion timing (outside loop for efficiency)
+    const scanCompleteTime = timeline.scanMoveTime + 0.3
+    const productMorphStart = scanCompleteTime + 0.2
+    const explosionDuration = 1.0 // Time for all bars to explode
+    const barExplosionDelay = explosionDuration / barCount // Delay between each bar explosion
     
     for (let i = 0; i < positions.length; i += 3) {
       const pointIndex = i / 3
+      const barIndex = barIndices[pointIndex]
+      
+      let localProgress = progress
+      let barMorphProgress = 1.0 // Progress for morphing this bar
+      let barExplosionProgress = 0.0 // Progress for exploding bar from barcode to product
+      
+      // Bar-by-bar fly-in animation during intro (before product morph)
+      if (phase === 'intro' && elapsed < timeline.intro - 1.2) {
+        const barStartTime = barIndex * barDelay
+        const barEndTime = barStartTime + 0.2 // Time for each bar to morph in
+        if (elapsed < barStartTime) {
+          barMorphProgress = 0 // Bar not started yet - stay at scatter
+        } else if (elapsed < barEndTime) {
+          const barProgress = (elapsed - barStartTime) / 0.2
+          barMorphProgress = easeInOutCubic(Math.min(barProgress, 1)) // Morph from 0 to 1
+        } else {
+          barMorphProgress = 1 // Bar fully morphed to barcode position
+        }
+      }
+      
+      // Bar-by-bar explosion from barcode to product (after scan completes)
+      if (phase === 'intro' && elapsed >= productMorphStart) {
+        const explosionElapsed = elapsed - productMorphStart
+        const barExplosionStart = barIndex * barExplosionDelay
+        const barExplosionEnd = barExplosionStart + 0.15 // Time for each bar to explode
+        
+        if (explosionElapsed < barExplosionStart) {
+          barExplosionProgress = 0 // Bar still at barcode position
+        } else if (explosionElapsed < barExplosionEnd) {
+          const barProgress = (explosionElapsed - barExplosionStart) / 0.15
+          barExplosionProgress = easeInOutCubic(Math.min(barProgress, 1)) // Progress from 0 to 1
+        } else {
+          barExplosionProgress = 1 // Bar fully morphed to product position
+        }
+      }
+      
       const stagger = (pointIndex / pointCount) * 0.3
-      const localProgress = Math.max(0, Math.min(1, (progress - stagger) / (1 - stagger)))
+      localProgress = Math.max(0, Math.min(1, (progress - stagger) / (1 - stagger)))
       
       for (let j = 0; j < 3; j++) {
         const idx = i + j
-        let targetValue = target[idx]
+        let targetValue = target[idx] ?? 0 // Fallback to 0 if undefined
         
-        // Apply vertical offset for product phases (Y coordinate)
-        // Apply during intro morphing too to prevent jump when transitioning to cycling
-        if (j === 1 && (phase === 'cycling' || (phase === 'intro' && elapsed > timeline.intro - 1.2))) {
-          targetValue += productYOffset
-        }
-        
-        // Add nervous/jittery drift to particles during intro chaos phase
+        // For bar-by-bar animation, interpolate between scatter and barcode positions
         if (phase === 'intro' && elapsed < timeline.intro - 1.2) {
-          const driftSpeed = 0.5 + (pointIndex % 3) * 0.2 // Vary speed per particle
-          const driftAmount = Math.sin(state.clock.elapsedTime * driftSpeed + pointIndex * 0.1) * 0.03
-          targetValue += driftAmount
+          const scatterValue = positionSets.scatter[idx] ?? 0
+          const barcodeValue = positionSets.barcode[idx] ?? 0
+          // Morph from scatter to barcode based on bar's individual progress
+          targetValue = THREE.MathUtils.lerp(scatterValue, barcodeValue, barMorphProgress)
         }
+        
+        // Bar-by-bar explosion from barcode to product (use already calculated barExplosionProgress)
+        if (phase === 'intro' && elapsed >= productMorphStart) {
+          const barcodeValue = positionSets.barcode[idx] ?? 0
+          let productValue = target[idx] ?? 0
+          // Apply scale to product during explosion so it matches barcode size
+          productValue *= productScale
+          if (j === 1) {
+            productValue += productYOffset
+          }
+          // Morph from barcode to product based on bar's explosion progress
+          targetValue = THREE.MathUtils.lerp(barcodeValue, productValue, barExplosionProgress)
+        }
+        
+        // Apply scale and vertical offset for product phases (only after morph completes)
+        // Don't apply during intro phase to avoid scaling down barcode
+        if (phase === 'preload' || phase === 'cycling') {
+          // Scale all dimensions
+          targetValue *= productScale
+          // Apply vertical offset for Y coordinate
+          if (j === 1) {
+            targetValue += productYOffset
+          }
+        }
+        
+        // No drift - chaos particles stay in place
         
         positions[idx] = THREE.MathUtils.lerp(
           positions[idx],
@@ -424,36 +540,33 @@ export function HeroAnimation({
     
     pointsRef.current.geometry.attributes.position.needsUpdate = true
     
-    // Rotation during product cycling - rotate around product's center vertical axis
-    if (shouldRotate && phase === 'cycling') {
-      // Increment rotation angle
-      rotationAngle.current += delta * 0.5 // Faster rotation for dynamic feel
-      
+    // Rotation during product phases
+    if (shouldRotate && (phase === 'preload' || phase === 'cycling')) {
+      rotationAngle.current += delta * 0.5
       const cos = Math.cos(rotationAngle.current)
       const sin = Math.sin(rotationAngle.current)
-      const productYOffset = -0.5 // Same offset as above for consistency
+      const productYOffset = -0.3
+      const productScale = 0.85
       
-      // Apply rotation to target positions (not accumulated positions)
       for (let i = 0; i < positions.length; i += 3) {
-        const targetX = target[i]
-        const targetZ = target[i + 2]
+        const targetX = (target[i] ?? 0) * productScale
+        const targetY = ((target[i + 1] ?? 0) * productScale) + productYOffset
+        const targetZ = (target[i + 2] ?? 0) * productScale
         
-        // Rotate around Y axis (vertical center)
         positions[i] = targetX * cos - targetZ * sin
-        positions[i + 1] = target[i + 1] + productYOffset // Apply Y offset
+        positions[i + 1] = targetY
         positions[i + 2] = targetX * sin + targetZ * cos
       }
       
       pointsRef.current.geometry.attributes.position.needsUpdate = true
-    } else if (rotationAngle.current !== 0) {
-      // Reset rotation when not in product phase
+    } else if (rotationAngle.current !== 0 && !shouldRotate) {
       rotationAngle.current = 0
     }
   })
   
   return (
     <>
-      {/* Chaos particles (background - orange) */}
+      {/* Single particle system */}
       <points ref={pointsRef}>
         <bufferGeometry>
           <bufferAttribute
@@ -475,33 +588,10 @@ export function HeroAnimation({
         />
       </points>
       
-      {/* Barcode particles (foreground - on top, visible from start) */}
-      <points ref={barcodePointsRef} position={[0, 0, 0.1]}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            array={barcodePositions}
-            count={pointCount}
-            itemSize={3}
-          />
-        </bufferGeometry>
-        <pointsMaterial
-          ref={barcodeMaterialRef}
-          size={pointSize}
-          color="#F8F8F7"
-          sizeAttenuation
-          transparent
-          opacity={0.92}
-          depthWrite={false}
-          blending={THREE.AdditiveBlending}
-        />
-      </points>
-      
-      {/* Scan line during intro phase */}
-      <group ref={scanLineRef}>
-        {/* Main electric scan line */}
+      {/* Scan line */}
+      <group ref={scanLineRef} visible={phase === 'intro' || phase === 'preload'}>
         <mesh position={[0, 0, 0.2]}>
-          <planeGeometry args={[0.15, 4]} />
+          <planeGeometry args={[0.15, 2.5]} />
           <primitive object={electricScanMaterial} ref={scanMaterialRef} />
         </mesh>
       </group>
