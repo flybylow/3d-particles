@@ -15,6 +15,7 @@ This folder contains all project documentation.
 - [Three-Act Narrative](./three-act-narrative.md) - Complete implementation guide for chaos → barcode → chocolate bar
 - [Coordinate System](./coordinate-system.md) - Uniform positioning and home positions for all products
 - [Learnings](./learnings.md) - What we learned building this system
+- **[Troubleshooting](./troubleshooting.md)** - Common issues and solutions (including WebAssembly memory errors)
 
 ## Organization
 

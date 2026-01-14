@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 
 // Generate procedural battery positions with realistic details
 // Batteries are centered at origin (0,0,0) for uniform positioning
@@ -86,6 +86,11 @@ export function generateBatteryPositions(pointCount: number): Float32Array {
 }
 
 export function useBatteryPositions(pointCount: number) {
+  // Log when battery positions are generated (procedural, so generated immediately)
+  useEffect(() => {
+    console.log(`[3D Model] Battery model (procedural) generated`)
+  }, [])
+  
   return useMemo(() => generateBatteryPositions(pointCount), [pointCount])
 }
 

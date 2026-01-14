@@ -67,6 +67,7 @@ export function Preloader({ onComplete }: PreloaderProps) {
   const [isComplete, setIsComplete] = useState(false)
 
   useEffect(() => {
+    console.log('[Preloader] Started')
     // Fast loading simulation - complete in 0.8-1.2 seconds
     const duration = 800 + Math.random() * 400
     const startTime = Date.now()
@@ -79,6 +80,7 @@ export function Preloader({ onComplete }: PreloaderProps) {
       if (newProgress >= 1) {
         clearInterval(interval)
         setIsComplete(true)
+        console.log('[Preloader] Complete')
         setTimeout(() => {
           onComplete()
         }, 200) // Small delay for smooth transition

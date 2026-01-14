@@ -1,11 +1,15 @@
 import { useRef, useMemo, useEffect, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { useCallback } from 'react'
 import { generateChocolateBarPositions } from './ChocolateBarGeometry'
 import { useWineBottlePositions } from './WineBottleGeometry'
 import { useBatteryPositions } from './BatteryGeometry'
 import { useTShirtPositions } from './TShirtGeometry'
 import { ElectricScanMaterial } from './ElectricScanShader'
+
+// Reusable buffer for morphing to avoid creating new arrays
+let morphBuffer: Float32Array | null = null
 
 interface Product {
   name: string
@@ -119,6 +123,84 @@ export function HeroAnimation({
   const battery = useBatteryPositions(pointCount)
   const tshirt = useTShirtPositions(pointCount)
   
+  // Generate passport card positions (simple flat rectangular card shape)
+  const generatePassportCardPositions = useCallback((pointCount: number): Float32Array => {
+    const positions: number[] = []
+    
+    // Passport card dimensions (ID card aspect ratio: ~85.6mm x 53.98mm = 1.586:1)
+    const cardWidth = 0.12  // Width in 3D units
+    const cardHeight = 0.075 // Height (maintains aspect ratio)
+    const cardDepth = 0.002  // Very thin for flat card
+    
+    // Passport position in 3D space (left side of screen)
+    const passportX = -2.8 // Left side
+    const passportY = 0 // Centered vertically
+    const passportZ = 4.8 // Closer to camera
+    
+    // Generate points on the card surface (front face)
+    for (let i = 0; i < pointCount; i++) {
+      // Random position on card surface
+      const x = (Math.random() - 0.5) * cardWidth
+      const y = (Math.random() - 0.5) * cardHeight
+      const z = cardDepth / 2 // Front face
+      
+      positions.push(passportX + x, passportY + y, passportZ + z)
+    }
+    
+    return new Float32Array(positions)
+  }, [])
+
+  // Generate passport positions from product positions (scaled down, positioned on left)
+  const generatePassportPositions = useCallback((productPositions: Float32Array): Float32Array => {
+    const passportPositions = new Float32Array(productPositions.length)
+    
+    // Calculate bounding box of product
+    let minX = Infinity, maxX = -Infinity
+    let minY = Infinity, maxY = -Infinity
+    let minZ = Infinity, maxZ = -Infinity
+    
+    for (let i = 0; i < productPositions.length; i += 3) {
+      minX = Math.min(minX, productPositions[i])
+      maxX = Math.max(maxX, productPositions[i])
+      minY = Math.min(minY, productPositions[i + 1])
+      maxY = Math.max(maxY, productPositions[i + 1])
+      minZ = Math.min(minZ, productPositions[i + 2])
+      maxZ = Math.max(maxZ, productPositions[i + 2])
+    }
+    
+    const centerX = (minX + maxX) / 2
+    const centerY = (minY + maxY) / 2
+    const centerZ = (minZ + maxZ) / 2
+    
+    const sizeX = maxX - minX
+    const sizeY = maxY - minY
+    const sizeZ = maxZ - minZ
+    const maxDim = Math.max(sizeX, sizeY, sizeZ)
+    
+    // Scale to passport size (~0.15 units - much smaller than product)
+    const passportScale = 0.15 / maxDim
+    
+    // Passport position in 3D space (left side of screen)
+    const passportX = -2.8 // Left side
+    const passportY = 0 // Centered vertically
+    const passportZ = 4.8 // Closer to camera
+    
+    // Transform each position
+    for (let i = 0; i < productPositions.length; i += 3) {
+      // Center and scale
+      const x = (productPositions[i] - centerX) * passportScale
+      const y = (productPositions[i + 1] - centerY) * passportScale
+      const z = (productPositions[i + 2] - centerZ) * passportScale
+      
+      // Position on left side
+      passportPositions[i] = passportX + x
+      passportPositions[i + 1] = passportY + y
+      passportPositions[i + 2] = passportZ + z
+    }
+    
+    return passportPositions
+  }, [])
+
   // Generate all position sets
   const positionSets = useMemo(() => {
     const scatter = generateScatterPositions(pointCount)
@@ -131,8 +213,14 @@ export function HeroAnimation({
       return wineBottle // fallback
     })
     
-    return { scatter, barcode, products: productPositions }
-  }, [pointCount, products, wineBottle, battery, tshirt])
+    // Generate passport card shape (simple flat card)
+    const passportCard = generatePassportCardPositions(pointCount)
+    
+    // Generate passport positions for each product (for cycling phase)
+    const passportPositions = productPositions.map(pos => generatePassportPositions(pos))
+    
+    return { scatter, barcode, products: productPositions, passportCard, passports: passportPositions }
+  }, [pointCount, products, wineBottle, battery, tshirt, generatePassportCardPositions, generatePassportPositions])
   
   // Track which bar each particle belongs to (for bar-by-bar animation)
   const barIndices = useMemo(() => {
@@ -178,8 +266,8 @@ export function HeroAnimation({
     intro: 3.5,                    // Intro: orange particles, scan moves
     scanMoveTime: 2.0,              // Time for scan to move
     preload: 4.0,                   // Show first product with panels
-    productDuration: 6.0,           // Show each product
-    transformDuration: 1.5          // Morph between products
+    productDuration: 5.0,           // Show each product (reduced from 6.0)
+    transformDuration: 1.0          // Morph between products (reduced from 1.5)
   }
   
   // Color states for emotional journey
@@ -191,12 +279,19 @@ export function HeroAnimation({
   }
   
   // Initialize positions - Start with CHAOS
+  // Create a copy that matches pointCount exactly
   const currentPositions = useMemo(() => {
-    return positionSets.scatter.slice()
-  }, [positionSets])
+    const positions = new Float32Array(pointCount * 3)
+    const scatter = positionSets.scatter
+    // Ensure we copy exactly pointCount * 3 elements
+    const copyLength = Math.min(positions.length, scatter.length)
+    positions.set(scatter.subarray(0, copyLength))
+    return positions
+  }, [positionSets, pointCount])
   
   // Phase management
   useEffect(() => {
+    console.log(`[Animation] Phase: ${phase}`)
     phaseStartTime.current = clock.elapsedTime
     if (scanLineRef.current) {
       scanLineRef.current.position.set(-barcodeWidth / 2, 0, 0)
@@ -225,7 +320,14 @@ export function HeroAnimation({
     if (!pointsRef.current) return
     
     const elapsed = state.clock.elapsedTime - phaseStartTime.current
-    const positions = pointsRef.current.geometry.attributes.position.array as Float32Array
+    const positionAttribute = pointsRef.current.geometry.attributes.position
+    const positions = positionAttribute.array as Float32Array
+    
+    // Ensure positions array matches expected size
+    if (positions.length !== pointCount * 3) {
+      console.warn(`Position array size mismatch: expected ${pointCount * 3}, got ${positions.length}`)
+      return
+    }
     
     // No camera zoom - keep camera position fixed
     
@@ -296,11 +398,13 @@ export function HeroAnimation({
       case 'intro':
         // Intro: Bars fly in one by one from scatter, scanline animates over barcode, then morphs to product
         // Scanline completes at timeline.scanMoveTime (2.0s), then holds briefly, then fades out
-        // Product morph starts after scanline finishes
+        // Product morph starts after scanline finishes, then transitions to passport card
         const barFlyInDuration = 1.2 // Time for all bars to fly in
-        const scanCompleteTime = timeline.scanMoveTime + 0.3 // Scan completes + brief hold
-        const productMorphStart = scanCompleteTime + 0.2 // Start morphing after scanline completes
-        const productMorphDuration = Math.max(0.1, timeline.intro - productMorphStart)
+        const scanCompleteTime = timeline.scanMoveTime + 0.2 // Scan completes + brief hold (reduced from 0.3)
+        const productMorphStart = scanCompleteTime + 0.1 // Start morphing after scanline completes (reduced from 0.2)
+        const productMorphDuration = 0.8 // Duration for barcode to bottle morph
+        const passportTransitionStart = productMorphStart + productMorphDuration + 0.3 // Hold bottle briefly, then transition to passport
+        const passportTransitionDuration = 1.0 // Duration to transition to passport card
         
         if (elapsed < productMorphStart) {
           // Bars fly in one by one from scatter to barcode positions
@@ -310,14 +414,49 @@ export function HeroAnimation({
           progress = 1 // Base progress - bars will animate individually
           particleColor = colors.offWhite
           chaosOpacity = 0.92
-        } else {
+        } else if (elapsed < passportTransitionStart) {
           // Bar-by-bar explosion from barcode to product (after scanline completes)
           // Each bar explodes individually into product positions
+          // Set product index and trigger transition start when transformation begins
+          if (elapsed - productMorphStart < 0.1) {
+            console.log('[Animation] Intro → Bottle morph started')
+            setCurrentProductIndex(0)
+            onPhaseChange?.('intro', 0)
+            onTransitionStart?.()
+          }
+          
           target = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.barcode
           progress = 1 // Base progress - bars will explode individually
           particleColor = colors.offWhite
           chaosOpacity = 0.92
           shouldRotate = false // No rotation during explosion
+        } else if (elapsed < passportTransitionStart + passportTransitionDuration) {
+          // Transition from bottle to passport card
+          const passportElapsed = elapsed - passportTransitionStart
+          const passportT = easeInOutCubic(passportElapsed / passportTransitionDuration)
+          
+          const bottleTarget = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.scatter
+          const passportTarget = positionSets.passportCard
+          
+          // Reuse morph buffer to avoid creating new arrays
+          if (!morphBuffer || morphBuffer.length !== pointCount * 3) {
+            morphBuffer = new Float32Array(pointCount * 3)
+          }
+          for (let i = 0; i < morphBuffer.length; i++) {
+            morphBuffer[i] = THREE.MathUtils.lerp(bottleTarget[i] ?? 0, passportTarget[i] ?? 0, passportT)
+          }
+          target = morphBuffer
+          progress = 1
+          particleColor = colors.offWhite
+          chaosOpacity = 0.92 * (1 - passportT * 0.5) // Fade as particles form passport card
+          shouldRotate = false // No rotation during passport transition
+        } else {
+          // Hold passport card briefly before transitioning to preload
+          target = positionSets.passportCard
+          progress = 1
+          particleColor = colors.offWhite
+          chaosOpacity = 0.46 // Half opacity for passport card
+          shouldRotate = false
         }
         
         if (elapsed > timeline.intro) {
@@ -329,9 +468,9 @@ export function HeroAnimation({
         break
         
       case 'preload':
-        // Preload: Show bottle, then morph to battery
-        const bottleHoldTime = 2.0
-        const batteryMorphDuration = timeline.preload - bottleHoldTime
+        // Preload: Show bottle, then morph to battery (faster transitions)
+        const bottleHoldTime = 1.0 // Reduced from 1.5 - shorter spin time
+        const batteryMorphDuration = 1.2 // Reduced from 2.0 (timeline.preload - bottleHoldTime)
         
         if (elapsed < bottleHoldTime) {
           // Hold bottle
@@ -343,6 +482,7 @@ export function HeroAnimation({
         } else {
           // Morph bottle to battery - trigger transition start
           if (elapsed - bottleHoldTime < 0.1) {
+            console.log('[Animation] Bottle → Battery morph started')
             onTransitionStart?.()
           }
           
@@ -352,10 +492,14 @@ export function HeroAnimation({
           const bottleTarget = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.scatter
           const batteryTarget = (positionSets.products && positionSets.products[1]) ? positionSets.products[1] : positionSets.scatter
           
-          target = new Float32Array(pointCount * 3)
-          for (let i = 0; i < target.length; i++) {
-            target[i] = THREE.MathUtils.lerp(bottleTarget[i] ?? 0, batteryTarget[i] ?? 0, batteryMorphProgress)
+          // Reuse morph buffer to avoid creating new arrays
+          if (!morphBuffer || morphBuffer.length !== pointCount * 3) {
+            morphBuffer = new Float32Array(pointCount * 3)
           }
+          for (let i = 0; i < morphBuffer.length; i++) {
+            morphBuffer[i] = THREE.MathUtils.lerp(bottleTarget[i] ?? 0, batteryTarget[i] ?? 0, batteryMorphProgress)
+          }
+          target = morphBuffer
           progress = 1
           particleColor = colors.offWhite
           chaosOpacity = 0.92
@@ -363,25 +507,32 @@ export function HeroAnimation({
           
           // Trigger transition end when morph completes
           if (batteryMorphProgress >= 0.95) {
+            console.log('[Animation] Bottle → Battery morph complete')
             onTransitionEnd?.()
           }
         }
         
-        if (elapsed > timeline.preload) {
-          setPhase('cycling')
-          productStartTime.current = clock.elapsedTime
-          setCurrentProductIndex(1) // Now showing battery
-          onPhaseChange?.('cycling', 1)
-        }
+            // Transition to cycling phase after bottle hold + battery morph completes
+            if (elapsed > bottleHoldTime + batteryMorphDuration) {
+              const batteryProduct = products[1]
+              console.log(`[3D Model] Battery model loaded and ready: ${batteryProduct?.name || 'none'}`)
+              setPhase('cycling')
+              productStartTime.current = clock.elapsedTime
+              setCurrentProductIndex(1) // Now showing battery
+              onPhaseChange?.('cycling', 1)
+            }
         break
         
       case 'cycling':
-        // Cycling: Cycle through products
+        // Cycling: Cycle through products (no passport transition - only intro does that)
         const productElapsed = clock.elapsedTime - productStartTime.current
         const nextProductIndex = (currentProductIndex + 1) % products.length
         const isTransforming = productElapsed > (timeline.productDuration - timeline.transformDuration)
         
         if (productElapsed > timeline.productDuration) {
+          const nextProduct = products[nextProductIndex]
+          console.log(`[Animation] Product change: ${currentProductIndex} → ${nextProductIndex} (${products[currentProductIndex]?.name || 'none'} → ${nextProduct?.name || 'none'})`)
+          console.log(`[3D Model] Loaded and displaying: ${nextProduct?.name || 'none'}`)
           setCurrentProductIndex(nextProductIndex)
           productStartTime.current = clock.elapsedTime
           onPhaseChange?.('cycling', nextProductIndex)
@@ -391,16 +542,25 @@ export function HeroAnimation({
           // Trigger transition start when morphing begins
           const transformElapsed = productElapsed - (timeline.productDuration - timeline.transformDuration)
           if (transformElapsed < 0.1) {
+            const currentProduct = products[currentProductIndex]
+            const nextProduct = products[nextProductIndex]
+            console.log(`[Animation] Morph started: ${currentProductIndex} → ${nextProductIndex} (${currentProduct?.name || 'none'} → ${nextProduct?.name || 'none'})`)
+            console.log(`[3D Model] Starting transition from: ${currentProduct?.name || 'none'}`)
             onTransitionStart?.()
           }
           
           const morphT = easeInOutCubic(transformElapsed / timeline.transformDuration)
           const currentTarget = (positionSets.products && positionSets.products[currentProductIndex]) ? positionSets.products[currentProductIndex] : positionSets.scatter
           const nextTarget = (positionSets.products && positionSets.products[nextProductIndex]) ? positionSets.products[nextProductIndex] : positionSets.scatter
-          target = new Float32Array(pointCount * 3)
-          for (let i = 0; i < target.length; i++) {
-            target[i] = THREE.MathUtils.lerp(currentTarget[i] ?? 0, nextTarget[i] ?? 0, morphT)
+          
+          // Reuse morph buffer to avoid creating new arrays
+          if (!morphBuffer || morphBuffer.length !== pointCount * 3) {
+            morphBuffer = new Float32Array(pointCount * 3)
           }
+          for (let i = 0; i < morphBuffer.length; i++) {
+            morphBuffer[i] = THREE.MathUtils.lerp(currentTarget[i] ?? 0, nextTarget[i] ?? 0, morphT)
+          }
+          target = morphBuffer
           progress = 1
           particleColor = colors.offWhite
           chaosOpacity = 0.92
@@ -408,6 +568,9 @@ export function HeroAnimation({
           
           // Trigger transition end when morph completes
           if (morphT >= 0.95) {
+            const nextProduct = products[nextProductIndex]
+            console.log(`[Animation] Morph complete: ${currentProductIndex} → ${nextProductIndex} (${nextProduct?.name || 'none'})`)
+            console.log(`[3D Model] Transition complete, model ready: ${nextProduct?.name || 'none'}`)
             onTransitionEnd?.()
           }
         } else {
@@ -432,7 +595,9 @@ export function HeroAnimation({
     
     // Interpolate positions with staggered timing
     // Apply uniform Y offset and scale for products (all objects centered at origin by default)
-    const productYOffset = -0.3 // Vertical position adjustment (moved up)
+    const baseProductYOffset = -0.3 // Vertical position adjustment (moved up)
+    // T-shirt needs additional offset since its geometry center is lower
+    const productYOffset = currentProductIndex === 2 ? baseProductYOffset + 0.4 : baseProductYOffset
     const productScale = 0.85 // Scale for products (increased since camera is further away)
     
     // Safety check: ensure target is defined and has correct length
@@ -446,9 +611,9 @@ export function HeroAnimation({
     const barDelay = barFlyInDuration / barCount // Delay between each bar
     
     // Calculate explosion timing (outside loop for efficiency)
-    const scanCompleteTime = timeline.scanMoveTime + 0.3
-    const productMorphStart = scanCompleteTime + 0.2
-    const explosionDuration = 1.0 // Time for all bars to explode
+    const scanCompleteTime = timeline.scanMoveTime + 0.2 // Reduced from 0.3
+    const productMorphStart = scanCompleteTime + 0.1 // Reduced from 0.2
+    const explosionDuration = 0.8 // Time for all bars to explode (reduced from 1.0)
     const barExplosionDelay = explosionDuration / barCount // Delay between each bar explosion
     
     for (let i = 0; i < positions.length; i += 3) {
@@ -545,7 +710,9 @@ export function HeroAnimation({
       rotationAngle.current += delta * 0.5
       const cos = Math.cos(rotationAngle.current)
       const sin = Math.sin(rotationAngle.current)
-      const productYOffset = -0.3
+      const baseProductYOffset = -0.3
+      // T-shirt needs additional offset since its geometry center is lower
+      const productYOffset = currentProductIndex === 2 ? baseProductYOffset + 0.4 : baseProductYOffset
       const productScale = 0.85
       
       for (let i = 0; i < positions.length; i += 3) {
@@ -564,6 +731,7 @@ export function HeroAnimation({
     }
   })
   
+
   return (
     <>
       {/* Single particle system */}
@@ -585,6 +753,7 @@ export function HeroAnimation({
           opacity={0.92}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
+          wireframe={false} // Ensure wireframe is disabled
         />
       </points>
       

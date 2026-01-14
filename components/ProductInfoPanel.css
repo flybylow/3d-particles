@@ -1,244 +1,482 @@
-/* Product Info Panels - Multiple panels with checkmarks */
-.product-info-panel {
-  position: fixed;
-  z-index: 100;
-  width: 280px; /* Default for standard */
-  min-height: 120px;
-  opacity: 0;
-  pointer-events: none;
-  transform-style: preserve-3d;
-  perspective: 1500px;
-  transform-origin: center center;
-  /* Start off-screen to the left */
-  transform: translateX(-400px) translateZ(0);
-  transition: none;
+/* Global styles for drei Html component */
+div[data-drei-html-wrapper] {
+  pointer-events: none !important;
 }
 
-.product-info-panel.visible {
+div[data-drei-html-wrapper] > * {
+  pointer-events: auto !important;
+}
+
+/* Digital Product Passport - Multiple cards stacked */
+
+.digital-product-passport-container {
+  position: fixed;
+  top: 50%;
+  left: 4%;
+  transform: translateY(-50%);
+  z-index: 100;
   opacity: 1;
-  animation: slideInFromLeft 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   pointer-events: auto;
 }
 
-.product-info-panel.visible.middle-left {
-  animation: slideInFromLeftMiddle 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+.info-card {
+  position: relative;
+  width: 340px; /* Credit card width */
+  max-width: 90vw;
+  height: 180px; /* Compact card height */
+  z-index: 100;
 }
 
-/* Staggered animation delays for each panel */
-.product-info-panel.visible.top-left {
-  animation-delay: 0.1s;
+.passport-card-large {
+  width: 420px; /* Original compact width */
+  max-width: 90vw;
+  height: auto; /* Dynamic height based on content */
+  min-height: 280px; /* Reduced height */
 }
 
-.product-info-panel.visible.middle-left {
-  animation-delay: 0.2s;
+.passport-card-tiny {
+  width: 340px; /* Match details card width */
+  max-width: 90vw;
+  height: auto;
+  min-height: 140px; /* Very compact */
 }
 
-.product-info-panel.visible.bottom-left {
-  animation-delay: 0.3s;
-}
-
-.product-info-panel.visible.bottom-middle-left {
-  animation-delay: 0.4s;
-}
-
-/* Slide out animation when transitioning */
-.product-info-panel.sliding-out {
-  animation: slideOutToLeft 0.4s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
-  pointer-events: none;
-}
-
-.product-info-panel.sliding-out.middle-left {
-  animation: slideOutToLeftMiddle 0.4s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
-}
-
-@keyframes slideOutToLeft {
-  0% {
-    transform: translateX(0) translateY(0) translateZ(500px) rotateX(0deg) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(-400px) translateY(0) translateZ(0) rotateX(0deg) scale(0.9);
-    opacity: 0;
-  }
-}
-
-@keyframes slideOutToLeftMiddle {
-  0% {
-    transform: translateX(0) translateY(-50%) translateZ(500px) rotateX(0deg) scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(-400px) translateY(-50%) translateZ(0) rotateX(0deg) scale(0.9);
-    opacity: 0;
-  }
-}
-
-@keyframes slideInFromLeft {
-  0% {
-    transform: translateX(-400px) translateY(0) translateZ(0) rotateX(0deg) scale(0.9);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0) translateY(0) translateZ(500px) rotateX(0deg) scale(1);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInFromLeftMiddle {
-  0% {
-    transform: translateX(-400px) translateY(-50%) translateZ(0) rotateX(0deg) scale(0.9);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0) translateY(-50%) translateZ(500px) rotateX(0deg) scale(1);
-    opacity: 1;
-  }
-}
-
-/* Panel positions - All on left side, right side free */
-.product-info-panel.top-left {
-  top: 12%;
-  left: 5%;
-  animation-delay: 0.1s;
-}
-
-.product-info-panel.middle-left {
-  top: 50%;
-  left: 5%;
-  animation-delay: 0.2s;
-}
-
-.product-info-panel.bottom-left {
-  bottom: 12%;
-  left: 5%;
-  animation-delay: 0.3s;
-}
-
-.product-info-panel.bottom-middle-left {
-  bottom: 32%;
-  left: 5%;
-  animation-delay: 0.4s;
-}
-
-/* Different form factors */
-.product-info-panel.standard {
-  width: 280px;
-  min-height: 120px;
-}
-
-.product-info-panel.wide {
-  width: 380px;
-  min-height: 100px;
-}
-
-.product-info-panel.visible.standard {
-  width: 280px;
-  min-height: 120px;
-}
-
-.product-info-panel.visible.wide {
-  width: 380px;
-  min-height: 100px;
-}
-
-.panel-background {
+.card-background {
   position: absolute;
   inset: 0;
-  background: #2A2A2A;
-  border: 1px solid rgba(136, 146, 125, 0.4);
+  background: linear-gradient(135deg, rgba(31, 31, 31, 0.85) 0%, rgba(42, 42, 42, 0.85) 100%); /* Slightly transparent (85% opacity) */
+  border: 2px solid rgba(136, 146, 125, 0.5);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 
-    0 0 40px rgba(136, 146, 125, 0.3),
-    0 8px 32px rgba(0, 0, 0, 0.4),
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(8px);
 }
 
-.panel-pattern {
+.card-pattern {
   position: absolute;
   inset: 0;
   background-image: 
     repeating-linear-gradient(
       0deg,
       transparent,
-      transparent 2px,
-      rgba(136, 146, 125, 0.03) 2px,
-      rgba(136, 146, 125, 0.03) 4px
+      transparent 3px,
+      rgba(136, 146, 125, 0.05) 3px,
+      rgba(136, 146, 125, 0.05) 6px
     ),
     repeating-linear-gradient(
       90deg,
       transparent,
-      transparent 2px,
-      rgba(136, 146, 125, 0.03) 2px,
-      rgba(136, 146, 125, 0.03) 4px
+      transparent 3px,
+      rgba(136, 146, 125, 0.05) 3px,
+      rgba(136, 146, 125, 0.05) 6px
     );
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
-.panel-content {
+.card-border {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(136, 146, 125, 0.2);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.card-content {
   position: relative;
   z-index: 1;
-  padding: 20px;
-  height: 100%;
+  padding: 14px; /* Original padding */
   display: flex;
   flex-direction: column;
-  opacity: 1;
+  min-height: 100%;
 }
 
-.panel-title {
+.passport-card-tiny .card-content {
+  padding: 10px; /* Smaller padding for tiny card */
+}
+
+.card-header {
+  margin-bottom: 8px; /* Reduced */
+  padding-bottom: 6px; /* Reduced */
+  border-bottom: 1px solid rgba(136, 146, 125, 0.3);
+}
+
+.passport-card-tiny .card-header {
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+}
+
+.card-title {
   font-family: 'Suisse Int\'l', 'Inter', system-ui, sans-serif;
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 7px; /* Smaller */
+  font-weight: 600; /* Bolder for better contrast */
+  color: rgba(136, 146, 125, 0.8); /* Higher opacity for better contrast */
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 3px; /* Reduced */
+}
+
+.card-subtitle {
+  font-family: 'Suisse Int\'l', 'Inter', system-ui, sans-serif;
+  font-size: 16px; /* Original size */
+  font-weight: 600;
   color: #F8F8F7;
-  letter-spacing: -0.02em;
-  margin-bottom: 16px;
+  letter-spacing: -0.01em;
   line-height: 1.2;
 }
 
-.panel-items {
-  display: flex;
-  flex-direction: column;
+.passport-card-tiny .card-subtitle {
+  font-size: 14px; /* Smaller for tiny card */
+}
+
+.passport-card-tiny .card-title {
+  font-size: 6px; /* Smaller for tiny card */
+}
+
+.card-body {
+  display: grid;
+  grid-template-columns: 90px 1fr;
   gap: 12px;
+  flex: 1;
+  align-items: start;
 }
 
-.panel-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+/* Large passport layout */
+.passport-body-large {
+  display: grid;
+  grid-template-columns: 120px 1fr; /* Original photo column */
+  gap: 14px; /* Original gap */
+  flex: 1;
+  margin-top: 8px;
+  align-items: start; /* Align to top */
 }
 
-.checkmark {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  min-height: 20px;
-  border-radius: 4px;
-  border: 2px solid rgba(136, 146, 125, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: transparent;
-  transition: all 0.3s ease-out;
-  flex-shrink: 0;
+/* Tiny passport layout */
+.passport-body-tiny {
+  display: grid;
+  grid-template-columns: 70px 1fr; /* Small photo column */
+  gap: 10px;
+  flex: 1;
+  margin-top: 6px;
+  align-items: start;
 }
 
-.checkmark.checked {
-  background: #88927D;
-  border-color: #88927D;
-  color: #1A1A1A;
-  box-shadow: 0 0 8px rgba(136, 146, 125, 0.4);
-}
-
-.item-content {
+.passport-info-section-tiny {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  justify-content: center;
+}
+
+.passport-photo-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.passport-info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px; /* Reduced gap */
+  /* Remove max-height to allow content to flow naturally */
+}
+
+.photo-frame {
+  width: 100%;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Clean animation container with very subtle thin border */
+.animation-container {
+  position: relative;
+  width: 100px; /* Original size */
+  height: 128px; /* Real ID card aspect ratio: 7/9 = 0.778, so 100/0.778 ≈ 128px */
+  aspect-ratio: 7 / 9; /* Maintains ID card photo proportions */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid rgba(136, 146, 125, 0.2); /* Very thin and light border */
+  border-radius: 2px;
+  background: transparent;
+  overflow: hidden;
+  flex-shrink: 0; /* Prevent shrinking */
+}
+
+/* Tiny card animation */
+.passport-card-tiny .animation-container {
+  width: 60px;
+  height: 77px; /* Maintains 7/9 aspect ratio */
+}
+
+/* Ensure Canvas is visible and styled like ID photo */
+.animation-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  filter: contrast(1.1) brightness(0.95);
+}
+
+.photo-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(136, 146, 125, 0.6);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.product-image-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(26, 26, 26, 0.5);
+}
+
+.product-emoji {
+  font-size: 48px;
+  margin-bottom: 8px;
+  filter: grayscale(0.3);
+}
+
+.product-name-small {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(136, 146, 125, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+/* Main Info - for first card */
+.main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+}
+
+.info-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(136, 146, 125, 0.15);
+}
+
+.info-line:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 7px; /* Slightly larger for better readability */
+  font-weight: 700; /* Bolder for better contrast */
+  color: rgba(136, 146, 125, 0.8); /* Higher opacity for better contrast */
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.info-value {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px; /* Better size for readability */
+  font-weight: 500;
+  color: #F8F8F7;
+  text-align: right;
+}
+
+/* Info Section - Basic info always visible */
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Reduced */
+  margin-bottom: 6px; /* Reduced */
+  padding-bottom: 6px; /* Reduced */
+  border-bottom: 1px solid rgba(136, 146, 125, 0.2);
+}
+
+/* Expandable sections with buttons */
+.expandable-section {
+  margin-bottom: 4px; /* Reduced */
+}
+
+.expand-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Reduced */
+  padding: 6px 8px; /* Reduced */
+  background: rgba(136, 146, 125, 0.05);
+  border: 1px solid rgba(136, 146, 125, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', system-ui, sans-serif;
+  text-align: left;
+}
+
+.expand-button:hover {
+  background: rgba(136, 146, 125, 0.1);
+  border-color: rgba(136, 146, 125, 0.3);
+}
+
+.button-icon {
+  font-size: 14px; /* Smaller */
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.button-label {
   flex: 1;
+  font-size: 9px; /* Smaller */
+  font-weight: 600;
+  color: #F8F8F7;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.button-arrow {
+  font-size: 9px; /* Smaller */
+  color: rgba(136, 146, 125, 0.8);
+  transition: transform 0.2s ease;
+}
+
+.expanded-content {
+  margin-top: 6px; /* Reduced */
+  padding: 8px; /* Reduced */
+  background: rgba(136, 146, 125, 0.05);
+  border: 1px solid rgba(136, 146, 125, 0.15);
+  border-radius: 4px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 200px;
+  }
+}
+
+.expanded-value {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px; /* Smaller */
+  font-weight: 500;
+  color: #F8F8F7;
+}
+
+.certification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0; /* Reduced */
+  border-bottom: 1px solid rgba(136, 146, 125, 0.1);
+}
+
+.certification-item:last-child {
+  border-bottom: none;
+}
+
+.cert-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 9px; /* Smaller */
+  font-weight: 500;
+  color: #F8F8F7;
+}
+
+.cert-status {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 8px; /* Smaller */
+  font-weight: 600;
+  color: rgba(136, 146, 125, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Info Items - Improved readability with icons */
+.info-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+  width: 100%;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(136, 146, 125, 0.2);
+  border-radius: 4px;
+  background: rgba(136, 146, 125, 0.05);
+  transition: all 0.2s ease;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.info-item:hover {
+  background: rgba(136, 146, 125, 0.1);
+  border-color: rgba(136, 146, 125, 0.3);
+}
+
+.item-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(136, 146, 125, 0.15);
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .item-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(136, 146, 125, 0.8);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.item-value {
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 13px;
   font-weight: 500;
@@ -246,38 +484,178 @@
   line-height: 1.4;
 }
 
-.item-value {
+.status-valid {
+  color: rgba(136, 146, 125, 1);
+  font-weight: 600;
+}
+
+/* Materials List */
+.materials-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px; /* Reduced */
+  margin-top: 4px;
+}
+
+.material-tag {
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 400;
+  font-size: 8px; /* Smaller */
+  font-weight: 500;
+  color: rgba(136, 146, 125, 0.9);
+  padding: 2px 6px; /* Reduced */
+  background: rgba(136, 146, 125, 0.1);
+  border: 1px solid rgba(136, 146, 125, 0.2);
+  border-radius: 3px;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 8px;
+}
+
+.loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(136, 146, 125, 0.2);
+  border-top-color: rgba(136, 146, 125, 0.8);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 8px;
+  font-weight: 500;
+  color: rgba(136, 146, 125, 0.7);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+
+
+/* Metadata Cloud Items - positioned in 3D space */
+.metadata-cloud-item {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  min-width: 200px;
+  max-width: 280px;
+  overflow: hidden;
+  border-radius: 8px;
+  z-index: 1000; /* Ensure it's above other elements */
+  pointer-events: auto;
+}
+
+/* Background matching ID card */
+.metadata-cloud-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(31, 31, 31, 0.85) 0%, rgba(42, 42, 42, 0.85) 100%);
+  border: 2px solid rgba(136, 146, 125, 0.5);
+  border-radius: 8px;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  z-index: 0;
+}
+
+.metadata-cloud-item > * {
+  position: relative;
+  z-index: 1;
+}
+
+.metadata-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.metadata-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metadata-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 600;
   color: rgba(136, 146, 125, 0.8);
-  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.metadata-value {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #F8F8F7;
+}
+
+.certifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.certifications-list .certification-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(136, 146, 125, 0.1);
+}
+
+.certifications-list .certification-item:last-child {
+  border-bottom: none;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
-  .product-info-panel.standard {
-    width: 240px;
-    min-height: 100px;
+  .info-card {
+    width: 90vw;
+    height: auto;
+    min-height: 160px;
   }
-  
-  .product-info-panel.wide {
-    width: 300px;
-    min-height: 90px;
+
+  .passport-card-large {
+    width: 90vw;
+    height: auto;
+    min-height: 300px;
   }
-  
-  .product-info-panel.top-left,
-  .product-info-panel.middle-left,
-  .product-info-panel.bottom-left,
-  .product-info-panel.bottom-middle-left {
-    left: 3%;
-  }
-  
-  .panel-content {
+
+  .card-content {
     padding: 16px;
   }
-  
-  .panel-title {
-    font-size: 16px;
+
+  .card-body,
+  .passport-body-large {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .photo-frame {
+    height: 150px;
+    width: 100%;
+    max-width: 120px;
+    margin: 0 auto;
+  }
+
+  .card-subtitle {
+    font-size: 18px;
   }
 }

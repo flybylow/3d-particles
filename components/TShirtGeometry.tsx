@@ -1,5 +1,5 @@
 import { useGLTF } from '@react-three/drei'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import * as THREE from 'three'
 
 export function preloadTShirt() {
@@ -7,7 +7,14 @@ export function preloadTShirt() {
 }
 
 export function useTShirtPositions(count: number) {
-  const gltf = useGLTF('/models/scene.gltf')
+  const { scene } = useGLTF('/models/scene.gltf')
+  
+  // Log when model is loaded
+  useEffect(() => {
+    if (scene) {
+      console.log(`[3D Model] T-Shirt model loaded`)
+    }
+  }, [scene])
   
   return useMemo(() => {
     const positions: number[] = []
@@ -15,7 +22,7 @@ export function useTShirtPositions(count: number) {
     // Calculate bounding box for centering
     const boundingBox = new THREE.Box3()
     
-    gltf.scene.traverse((child) => {
+    scene.traverse((child) => {
       if (child instanceof THREE.Mesh && child.geometry) {
         const geometry = child.geometry.clone()
         
@@ -79,5 +86,5 @@ export function useTShirtPositions(count: number) {
     }
     
     return sampledPositions
-  }, [gltf, count])
+  }, [scene, count])
 }

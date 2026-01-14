@@ -1,0 +1,135 @@
+/* Product Details Flow - Clean white card styling */
+.product-details-flow {
+  position: fixed;
+  left: 4%; /* Match passport card positioning exactly */
+  top: calc(50% + 100px); /* Position below the centered passport card */
+  transform: translateY(0); /* No vertical centering, just positioned */
+  width: 340px; /* Same width as passport cards */
+  min-height: 180px; /* Credit card height */
+  pointer-events: none;
+  z-index: 4; /* Below passport card z-index of 100 */
+  border-radius: 8px;
+  animation: flowSlideUp 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-background {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(31, 31, 31, 0.85) 0%, rgba(42, 42, 42, 0.85) 100%);
+  border: 2px solid rgba(136, 146, 125, 0.5);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.card-pattern {
+  position: absolute;
+  inset: 6px;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(136, 146, 125, 0.03) 3px,
+      rgba(136, 146, 125, 0.03) 6px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 3px,
+      rgba(136, 146, 125, 0.03) 3px,
+      rgba(136, 146, 125, 0.03) 6px
+    );
+  opacity: 0.4;
+  border-radius: 2px;
+}
+
+.card-border {
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(136, 146, 125, 0.1);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.flow-content {
+  position: relative;
+  z-index: 10;
+  padding: 10px; /* Smaller padding like passport card */
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0; /* No gap, using border-bottom for separation */
+}
+
+/* Use same info-line styling as passport card */
+.product-details-flow .info-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(136, 146, 125, 0.15);
+}
+
+.product-details-flow .info-line:last-child {
+  border-bottom: none;
+}
+
+.product-details-flow .info-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 7px;
+  font-weight: 700;
+  color: rgba(136, 146, 125, 0.8);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.product-details-flow .info-value {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px; /* Better size for readability */
+  font-weight: 500;
+  color: rgba(248, 248, 247, 0.9);
+  text-align: right;
+}
+
+/* All values use the same info-value styling */
+
+/* Slide up animation */
+@keyframes flowSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .product-details-flow {
+    left: 4%;
+    width: calc(80% - 20px);
+    max-width: 320px;
+    top: calc(50% + 120px);
+    min-height: 140px;
+  }
+
+  .details-grid {
+    gap: 0;
+  }
+
+  .flow-content {
+    padding: 10px;
+  }
+}

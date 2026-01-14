@@ -1,6 +1,6 @@
 import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 
 /**
  * Hook to extract vertices from the wine bottle GLTF model for particle positioning
@@ -10,6 +10,13 @@ import { useMemo } from 'react'
  */
 export function useWineBottlePositions(pointCount: number, scale: number = 0.175): Float32Array {
   const { scene } = useGLTF('/models/wine-bottle.gltf')
+  
+  // Log when model is loaded
+  useEffect(() => {
+    if (scene) {
+      console.log(`[3D Model] Wine Bottle model loaded`)
+    }
+  }, [scene])
   
   return useMemo(() => {
     const positions = extractModelPositions(scene, pointCount)
