@@ -237,25 +237,20 @@
 
 /* CTA - Right side */
 .hero-cta {
-  position: fixed !important; /* Changed from absolute to fixed */
+  position: fixed !important;
   top: 50%;
   right: 4%;
-  transform: translateY(-50%);
-  z-index: 1000 !important; /* Higher z-index */
+  transform: translateY(-50%) translateX(20px);
+  z-index: 1000 !important;
   opacity: 0;
-  animation: fadeInCTA 1s ease-out 0.5s forwards;
-  pointer-events: auto;
+  pointer-events: none;
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
 }
 
-@keyframes fadeInCTA {
-  from {
-    opacity: 0;
-    transform: translateY(-50%) translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0);
-  }
+.hero-cta.visible {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+  pointer-events: auto;
 }
 
 .cta-content {

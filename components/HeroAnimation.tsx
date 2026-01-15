@@ -123,83 +123,6 @@ export function HeroAnimation({
   const battery = useBatteryPositions(pointCount)
   const tshirt = useTShirtPositions(pointCount)
   
-  // Generate passport card positions (simple flat rectangular card shape)
-  const generatePassportCardPositions = useCallback((pointCount: number): Float32Array => {
-    const positions: number[] = []
-    
-    // Passport card dimensions (ID card aspect ratio: ~85.6mm x 53.98mm = 1.586:1)
-    const cardWidth = 0.12  // Width in 3D units
-    const cardHeight = 0.075 // Height (maintains aspect ratio)
-    const cardDepth = 0.002  // Very thin for flat card
-    
-    // Passport position in 3D space (left side of screen)
-    const passportX = -2.8 // Left side
-    const passportY = 0 // Centered vertically
-    const passportZ = 4.8 // Closer to camera
-    
-    // Generate points on the card surface (front face)
-    for (let i = 0; i < pointCount; i++) {
-      // Random position on card surface
-      const x = (Math.random() - 0.5) * cardWidth
-      const y = (Math.random() - 0.5) * cardHeight
-      const z = cardDepth / 2 // Front face
-      
-      positions.push(passportX + x, passportY + y, passportZ + z)
-    }
-    
-    return new Float32Array(positions)
-  }, [])
-
-  // Generate passport positions from product positions (scaled down, positioned on left)
-  const generatePassportPositions = useCallback((productPositions: Float32Array): Float32Array => {
-    const passportPositions = new Float32Array(productPositions.length)
-    
-    // Calculate bounding box of product
-    let minX = Infinity, maxX = -Infinity
-    let minY = Infinity, maxY = -Infinity
-    let minZ = Infinity, maxZ = -Infinity
-    
-    for (let i = 0; i < productPositions.length; i += 3) {
-      minX = Math.min(minX, productPositions[i])
-      maxX = Math.max(maxX, productPositions[i])
-      minY = Math.min(minY, productPositions[i + 1])
-      maxY = Math.max(maxY, productPositions[i + 1])
-      minZ = Math.min(minZ, productPositions[i + 2])
-      maxZ = Math.max(maxZ, productPositions[i + 2])
-    }
-    
-    const centerX = (minX + maxX) / 2
-    const centerY = (minY + maxY) / 2
-    const centerZ = (minZ + maxZ) / 2
-    
-    const sizeX = maxX - minX
-    const sizeY = maxY - minY
-    const sizeZ = maxZ - minZ
-    const maxDim = Math.max(sizeX, sizeY, sizeZ)
-    
-    // Scale to passport size (~0.15 units - much smaller than product)
-    const passportScale = 0.15 / maxDim
-    
-    // Passport position in 3D space (left side of screen)
-    const passportX = -2.8 // Left side
-    const passportY = 0 // Centered vertically
-    const passportZ = 4.8 // Closer to camera
-    
-    // Transform each position
-    for (let i = 0; i < productPositions.length; i += 3) {
-      // Center and scale
-      const x = (productPositions[i] - centerX) * passportScale
-      const y = (productPositions[i + 1] - centerY) * passportScale
-      const z = (productPositions[i + 2] - centerZ) * passportScale
-      
-      // Position on left side
-      passportPositions[i] = passportX + x
-      passportPositions[i + 1] = passportY + y
-      passportPositions[i + 2] = passportZ + z
-    }
-    
-    return passportPositions
-  }, [])
 
   // Generate all position sets
   const positionSets = useMemo(() => {
@@ -212,15 +135,9 @@ export function HeroAnimation({
       if (index === 2) return tshirt
       return wineBottle // fallback
     })
-    
-    // Generate passport card shape (simple flat card)
-    const passportCard = generatePassportCardPositions(pointCount)
-    
-    // Generate passport positions for each product (for cycling phase)
-    const passportPositions = productPositions.map(pos => generatePassportPositions(pos))
-    
-    return { scatter, barcode, products: productPositions, passportCard, passports: passportPositions }
-  }, [pointCount, products, wineBottle, battery, tshirt, generatePassportCardPositions, generatePassportPositions])
+
+    return { scatter, barcode, products: productPositions }
+  }, [pointCount, products, wineBottle, battery, tshirt])
   
   // Track which bar each particle belongs to (for bar-by-bar animation)
   const barIndices = useMemo(() => {
@@ -304,16 +221,6 @@ export function HeroAnimation({
     }
   }, [phase, clock, camera, barcodeWidth])
   
-  // Auto-transition from loading to intro
-  useEffect(() => {
-    if (phase === 'loading') {
-      const timer = setTimeout(() => {
-        setPhase('intro')
-        phaseStartTime.current = clock.elapsedTime
-      }, timeline.loading * 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [phase, clock, timeline.loading])
   
   // Main animation loop
   useFrame((state, delta) => {
@@ -398,14 +305,11 @@ export function HeroAnimation({
       case 'intro':
         // Intro: Bars fly in one by one from scatter, scanline animates over barcode, then morphs to product
         // Scanline completes at timeline.scanMoveTime (2.0s), then holds briefly, then fades out
-        // Product morph starts after scanline finishes, then transitions to passport card
+        // Product morph starts after scanline finishes
         const barFlyInDuration = 1.2 // Time for all bars to fly in
-        const scanCompleteTime = timeline.scanMoveTime + 0.2 // Scan completes + brief hold (reduced from 0.3)
-        const productMorphStart = scanCompleteTime + 0.1 // Start morphing after scanline completes (reduced from 0.2)
-        const productMorphDuration = 0.8 // Duration for barcode to bottle morph
-        const passportTransitionStart = productMorphStart + productMorphDuration + 0.3 // Hold bottle briefly, then transition to passport
-        const passportTransitionDuration = 1.0 // Duration to transition to passport card
-        
+        const scanCompleteTime = timeline.scanMoveTime + 0.2 // Scan completes + brief hold
+        const productMorphStart = scanCompleteTime + 0.1 // Start morphing after scanline completes
+
         if (elapsed < productMorphStart) {
           // Bars fly in one by one from scatter to barcode positions
           // Each bar animates individually with staggered timing
@@ -414,7 +318,7 @@ export function HeroAnimation({
           progress = 1 // Base progress - bars will animate individually
           particleColor = colors.offWhite
           chaosOpacity = 0.92
-        } else if (elapsed < passportTransitionStart) {
+        } else {
           // Bar-by-bar explosion from barcode to product (after scanline completes)
           // Each bar explodes individually into product positions
           // Set product index and trigger transition start when transformation begins
@@ -424,41 +328,14 @@ export function HeroAnimation({
             onPhaseChange?.('intro', 0)
             onTransitionStart?.()
           }
-          
+
           target = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.barcode
           progress = 1 // Base progress - bars will explode individually
           particleColor = colors.offWhite
           chaosOpacity = 0.92
           shouldRotate = false // No rotation during explosion
-        } else if (elapsed < passportTransitionStart + passportTransitionDuration) {
-          // Transition from bottle to passport card
-          const passportElapsed = elapsed - passportTransitionStart
-          const passportT = easeInOutCubic(passportElapsed / passportTransitionDuration)
-          
-          const bottleTarget = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.scatter
-          const passportTarget = positionSets.passportCard
-          
-          // Reuse morph buffer to avoid creating new arrays
-          if (!morphBuffer || morphBuffer.length !== pointCount * 3) {
-            morphBuffer = new Float32Array(pointCount * 3)
-          }
-          for (let i = 0; i < morphBuffer.length; i++) {
-            morphBuffer[i] = THREE.MathUtils.lerp(bottleTarget[i] ?? 0, passportTarget[i] ?? 0, passportT)
-          }
-          target = morphBuffer
-          progress = 1
-          particleColor = colors.offWhite
-          chaosOpacity = 0.92 * (1 - passportT * 0.5) // Fade as particles form passport card
-          shouldRotate = false // No rotation during passport transition
-        } else {
-          // Hold passport card briefly before transitioning to preload
-          target = positionSets.passportCard
-          progress = 1
-          particleColor = colors.offWhite
-          chaosOpacity = 0.46 // Half opacity for passport card
-          shouldRotate = false
         }
-        
+
         if (elapsed > timeline.intro) {
           setPhase('preload')
           phaseStartTime.current = clock.elapsedTime
@@ -753,7 +630,6 @@ export function HeroAnimation({
           opacity={0.92}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
-          wireframe={false} // Ensure wireframe is disabled
         />
       </points>
       
