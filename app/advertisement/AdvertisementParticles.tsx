@@ -33,6 +33,11 @@ function generateTextParticles(text: string, count: number): Float32Array {
   return positions
 }
 
+// Easing: easeOutCubic (Three.js MathUtils doesn't have this)
+function easeOutCubic(t: number): number {
+  return 1 - Math.pow(1 - t, 3)
+}
+
 // Generate scatter positions (explosion effect)
 function generateScatter(count: number, spread: number = 3): Float32Array {
   const positions = new Float32Array(count * 3)
@@ -126,7 +131,7 @@ export function AdvertisementParticles({ sequence, isVisible }: AdvertisementPar
       // Fast form into text
       if (phaseTime.current < 0.4) {
         morphProgress.current = Math.min(phaseTime.current / 0.4, 1)
-        const t = THREE.MathUtils.easeOutCubic(morphProgress.current)
+        const t = easeOutCubic(morphProgress.current)
         
         for (let i = 0; i < pointCount * 3; i += 3) {
           const scatterX = scatterPositionsRef.current[i]
