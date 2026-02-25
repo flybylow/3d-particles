@@ -8,7 +8,7 @@ import './consumer.css'
 const SECTIONS = ['scan', 'trace', 'verify', 'trust']
 
 export default function ConsumerPage() {
-  const [currentSection, setCurrentSection] = useState(0)
+  const [currentSection, setCurrentSection] = useState(-1)
   const [mousePosition, setMousePosition] = useState({ x: 0.5, y: 0.5 })
   const [scanLine, setScanLine] = useState(-0.2)
   const [brightness, setBrightness] = useState(0)
@@ -19,12 +19,26 @@ export default function ConsumerPage() {
 
   const scanStartRef = useRef(0)
   const traceStartRef = useRef(0)
+  const trustRef = useRef<HTMLElement>(null)
+  const verifyRef = useRef<HTMLElement>(null)
+  const [trustInView, setTrustInView] = useState(false)
+  const [verifyInView, setVerifyInView] = useState(false)
 
   // Handle scroll to update current section
   useEffect(() => {
     const handleScroll = () => {
       const sections = document.querySelectorAll('.consumer-section')
       const windowHeight = window.innerHeight
+
+      // If hero is in view (first section not yet centered), no nav active
+      const firstSection = sections[0]
+      if (firstSection) {
+        const firstRect = firstSection.getBoundingClientRect()
+        if (firstRect.top > windowHeight * 0.4) {
+          setCurrentSection(-1)
+          return
+        }
+      }
 
       sections.forEach((section, index) => {
         const rect = section.getBoundingClientRect()
@@ -36,6 +50,7 @@ export default function ConsumerPage() {
       })
     }
 
+    handleScroll() // Initial check
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
@@ -112,6 +127,30 @@ export default function ConsumerPage() {
     setTraceProgress(0)
   }, [isTracing])
 
+  // Trust section: animate examples when scrolled into view
+  useEffect(() => {
+    const el = trustRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([e]) => e.isIntersecting && setTrustInView(true),
+      { threshold: 0.2 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  // Verify section: animate badges when scrolled into view
+  useEffect(() => {
+    const el = verifyRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      ([e]) => e.isIntersecting && setVerifyInView(true),
+      { threshold: 0.2 }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
   const scrollToSection = (sectionId: string) => {
     const element = document.getElementById(sectionId)
     if (element) {
@@ -142,12 +181,20 @@ export default function ConsumerPage() {
         ))}
       </nav>
 
+      {/* Hero / Opening - cinematic moment before sections */}
+      <div className="consumer-hero">
+        <div className="consumer-hero-content">
+          <p className="consumer-hero-line1">You buy a product. It has a digital passport.</p>
+          <p className="consumer-hero-line2">Not paperwork. A living link to everything about it.</p>
+        </div>
+      </div>
+
       <div className="consumer-sections">
         {/* SCAN Section */}
         <section className="consumer-section section-scan" id="scan">
           <div className="section-content">
             <div className="scan-header">
-              <h2>Scan Any Product</h2>
+              <h2>Scan. Meet Your Product.</h2>
               <button
                 className={`scan-button ${isScanning ? 'scanning' : ''}`}
                 onClick={handleScan}
@@ -156,7 +203,7 @@ export default function ConsumerPage() {
                 <div className="scan-ring" />
               </button>
             </div>
-            <p>Point your phone at any barcode. Get instant access to the product story.</p>
+            <p>Point your phone. See where it came from, what it&apos;s made of, and if the label is honest.</p>
 
             <div className={`product-passport ${showPassport ? 'visible' : ''}`}>
               <img src="/consumer/product.png" alt="Product" className="product-image" />
@@ -187,7 +234,7 @@ export default function ConsumerPage() {
           <img src="/consumer/phone.png" alt="" className="section-image" />
           <div className="section-content">
             <h2>Trace The Journey</h2>
-            <p>Follow the complete path from raw materials to finished product. Every step documented, every hand it passed through.</p>
+            <p>Your coffee started on a farm in Colombia. It crossed an ocean. It was roasted in the Netherlands. Every step, every hand, every mile — documented. You&apos;re not trusting a label. You&apos;re reading a life story.</p>
 
             <button
               className={`trace-button ${isTracing ? 'tracing' : ''}`}
@@ -230,20 +277,42 @@ export default function ConsumerPage() {
         </section>
 
         {/* VERIFY Section */}
-        <section className="consumer-section section-verify" id="verify">
+        <section ref={verifyRef} className={`consumer-section section-verify ${verifyInView ? 'in-view' : ''}`} id="verify">
           <div className="section-content">
             <h2>Verify The Claims</h2>
-            <p>Organic? Fair trade? Sustainably sourced? We check the certifications so you don't have to trust marketing alone.</p>
+            <p>Organic? Fair trade? Sustainably sourced? Every claim is backed by real certifications you can check yourself. No more trusting marketing alone.</p>
+            <div className="verify-badges">
+              <span className="verify-badge">✓</span>
+              <span className="verify-badge">✓</span>
+              <span className="verify-badge">✓</span>
+            </div>
           </div>
         </section>
 
         {/* TRUST Section */}
-        <section className="consumer-section section-trust" id="trust">
-          <div className="section-content">
+        <section ref={trustRef} className={`consumer-section section-trust ${trustInView ? 'in-view' : ''}`} id="trust">
+          <div className="section-content section-trust-content">
             <h2>Trust What You Buy</h2>
-            <p>Make informed decisions based on facts.</p>
+            <p className="trust-intro">Ask your vacuum cleaner which filter to order. Check your bike&apos;s battery health. See where the cotton in your jacket was grown.</p>
+            <ul className="trust-examples">
+              <li><span className="trust-question">Need a repair?</span> Your product knows every part.</li>
+              <li><span className="trust-question">Want to resell?</span> It proves what it&apos;s worth.</li>
+              <li><span className="trust-question">Time to recycle?</span> It tells the recycler exactly what&apos;s inside.</li>
+            </ul>
           </div>
         </section>
+
+        {/* Privacy Block */}
+        <div className="consumer-privacy">
+          <p>Your product data stays yours. Not the brand&apos;s. Not ours. Yours.</p>
+          <p>Stored in your personal data vault, secured with your own login.</p>
+          <p>We don&apos;t see it. We don&apos;t sell it.</p>
+        </div>
+
+        {/* Closing Line */}
+        <div className="consumer-closing">
+          <p>Every product has a story. Now you can actually hear it.</p>
+        </div>
       </div>
     </div>
   )

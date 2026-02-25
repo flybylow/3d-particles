@@ -184,10 +184,12 @@ export function ProducerShaderBackground({
   // Update uniforms when props change
   useEffect(() => {
     if (materialRef.current) {
-      materialRef.current.uniforms.uCurrentSection.value = currentSection
+      // Map 7 sections to 3 background states: 0-1 PRODUCE, 2-3 COMPLY, 4-6 LEAD
+      const bgSection = currentSection <= 1 ? 0 : currentSection <= 3 ? 1 : 2
+      materialRef.current.uniforms.uCurrentSection.value = bgSection
 
       // Update text texture
-      const text = sectionTexts[currentSection] || 'PRODUCE'
+      const text = sectionTexts[bgSection] || 'PRODUCE'
       if (textTextureRef.current) {
         textTextureRef.current.dispose()
       }
