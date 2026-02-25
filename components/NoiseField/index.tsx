@@ -352,12 +352,8 @@ function Scene({ wordIndex, morphProgress, settings }: {
       <TextParticles wordIndex={wordIndex} morphProgress={morphProgress} settings={settings} />
       <EffectComposer>
         <Bloom intensity={wordStyle.bloom} luminanceThreshold={0.5} luminanceSmoothing={0.9} mipmapBlur />
-        {wordStyle.chromatic > 0 && (
-          <ChromaticAberration offset={new THREE.Vector2(wordStyle.chromatic, wordStyle.chromatic)} radialModulation={false} modulationOffset={0} />
-        )}
-        {wordStyle.scanlines > 0 && (
-          <Scanline blendFunction={BlendFunction.OVERLAY} density={wordStyle.scanlines} />
-        )}
+        <ChromaticAberration offset={new THREE.Vector2(wordStyle.chromatic, wordStyle.chromatic)} radialModulation={false} modulationOffset={0} />
+        <Scanline blendFunction={BlendFunction.OVERLAY} density={wordStyle.scanlines} />
         <Noise opacity={0.04} />
         <Vignette darkness={0.45} offset={0.4} />
       </EffectComposer>

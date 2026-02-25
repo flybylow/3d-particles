@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Song, Track, Instrument } from 'reactronica';
+import { Song, Track, Instrument, StepType } from 'reactronica';
 import styles from './styles.module.css';
 
 export default function AudioPlayer() {
@@ -11,7 +11,7 @@ export default function AudioPlayer() {
   const [useSynth, setUseSynth] = useState(false);
 
   // Steps for sampler - each step triggers a sample mapped to a note
-  const steps = [
+  const steps: StepType[] = [
     [{ name: 'C3', duration: 1 }],  // SCAN
     null,
     [{ name: 'D3', duration: 1 }],  // CHECK

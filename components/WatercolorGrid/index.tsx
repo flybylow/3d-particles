@@ -58,7 +58,7 @@ function generateLines(tiles: TileConfig[]) {
     for (let col = 0; col < GRID_COLS - 1; col++) {
       const from = tiles[row * GRID_COLS + col];
       const to = tiles[row * GRID_COLS + col + 1];
-      lines.push({ ...center(from), x2: center(to).x, y2: center(to).y, delay: (row + col) * 0.1 });
+      lines.push({ x1: center(from).x, y1: center(from).y, x2: center(to).x, y2: center(to).y, delay: (row + col) * 0.1 });
     }
   }
 
