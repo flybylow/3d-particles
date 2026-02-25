@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shader Sections</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a href="../../index.html" class="nav-logo">TABULAS</a>
+    <div class="nav-item"><a href="#scan">Scan</a></div>
+    <div class="nav-item"><a href="#trace">Trace</a></div>
+    <div class="nav-item"><a href="#verify">Verify</a></div>
+    <div class="nav-item"><a href="#trust">Trust</a></div>
+  </nav>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <div class="sections">
+    <section class="section" data-text="SCAN" id="scan">
+      <div class="section-content">
+        <div class="scan-header">
+          <h2>Scan Any Product</h2>
+          <div class="scan-button" id="scanButton">
+            <span class="scan-text">Scan</span>
+            <div class="scan-ring"></div>
+          </div>
+        </div>
+        <p>Point your phone at any barcode. Get instant access to the product story.</p>
+
+        <div class="product-passport" id="productPassport">
+          <img src="product.png" alt="Product" class="product-image">
+          <div class="passport-items">
+            <div class="passport-item">
+              <span class="passport-label">Origin</span>
+              <span class="passport-value">Colombia, South America</span>
+            </div>
+            <div class="passport-item">
+              <span class="passport-label">Certified</span>
+              <span class="passport-value">Fair Trade, Organic</span>
+            </div>
+            <div class="passport-item">
+              <span class="passport-label">Carbon</span>
+              <span class="passport-value">2.1 kg CO₂</span>
+            </div>
+            <div class="passport-item">
+              <span class="passport-label">Batch</span>
+              <span class="passport-value">#TBL-2026-0142</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section has-image" data-text="TRACE" id="trace">
+      <img src="phone.png" alt="" class="section-image">
+      <div class="section-content">
+        <h2>Trace The Journey</h2>
+        <p>Follow the complete path from raw materials to finished product. Every step documented, every hand it passed through.</p>
+
+        <div class="trace-button" id="traceButton">
+          <span class="trace-text">Trace</span>
+          <div class="trace-ring"></div>
+        </div>
+
+        <div class="journey-timeline" id="journeyTimeline">
+          <div class="trace-line-container">
+            <div class="trace-line" id="traceLine"></div>
+            <div class="trace-head" id="traceHead"></div>
+          </div>
+          <div class="journey-step" data-step="1">
+            <div class="step-dot"></div>
+            <div class="step-info">
+              <span class="step-label">Farm</span>
+              <span class="step-detail">Colombia</span>
+            </div>
+          </div>
+          <div class="journey-step" data-step="2">
+            <div class="step-dot"></div>
+            <div class="step-info">
+              <span class="step-label">Transport</span>
+              <span class="step-detail">Ship & Truck</span>
+            </div>
+          </div>
+          <div class="journey-step" data-step="3">
+            <div class="step-dot"></div>
+            <div class="step-info">
+              <span class="step-label">Production</span>
+              <span class="step-detail">Netherlands</span>
+            </div>
+          </div>
+          <div class="journey-step" data-step="4">
+            <div class="step-dot"></div>
+            <div class="step-info">
+              <span class="step-label">Shop</span>
+              <span class="step-detail">Local Store</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" data-text="VERIFY" id="verify">
+      <div class="section-content">
+        <h2>Verify The Claims</h2>
+        <p>Organic? Fair trade? Sustainably sourced? We check the certifications so you don't have to trust marketing alone.</p>
+      </div>
+    </section>
+
+    <section class="section" data-text="TRUST" id="trust">
+      <div class="section-content">
+        <h2>Trust What You Buy</h2>
+        <p>Make informed decisions based on facts.</p>
+      </div>
+    </section>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module" src="script.js"></script>
+</body>
+</html>

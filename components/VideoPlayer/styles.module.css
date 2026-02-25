@@ -1,0 +1,93 @@
+.container {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.video {
+  width: 100%;
+  height: auto;
+  cursor: default;
+}
+
+.toggleButton {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  opacity: 0.2;
+  transition: opacity 0.3s ease;
+  padding: 4px;
+}
+
+.toggleButton:hover {
+  opacity: 0.5;
+}
+
+.toggleIcon {
+  color: #fff;
+  font-size: 10px;
+  font-family: system-ui, sans-serif;
+  font-weight: 200;
+}
+
+.controls {
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.controlButton {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px;
+  transition: color 0.2s ease;
+}
+
+.controlButton:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.progressContainer {
+  width: 3px;
+  height: 60px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.progressBar {
+  width: 3px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  transition: height 0.1s linear;
+}

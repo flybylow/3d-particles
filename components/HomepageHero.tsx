@@ -2,9 +2,10 @@
 
 import { useState, Suspense, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
+import Link from 'next/link'
 import { HeroAnimation } from './HeroAnimation'
-import { ProductInfoTile } from './ProductInfoTile'
 import { Preloader } from './Preloader'
+import { FlowBackground } from './FlowBackground'
 import { preloadWineBottle } from './WineBottleGeometry'
 import { preloadBattery } from './BatteryGeometry'
 import { preloadTShirt } from './TShirtGeometry'
@@ -56,15 +57,15 @@ preloadWineBottle()
 preloadBattery()
 preloadTShirt()
 
-// Flow: Intro (chaos) → Barcode → Product cycling
-// Copy: "Scan any product." → "Verify." → Product labels
+// Flow: Intro (chaos) → Barcode → Trust → Product cycling
+// Copy: "Scan any product." → "Trust the product." → Product labels
 const PHASES = {
   intro: {
-    headline: 'Scan any product.', // 0-1.2s: Text visible, scanning continues to 3.5s
+    headline: 'Scan any product.', // 0-1.2s: Text visible
     subline: ''
   },
-  barcode: {
-    headline: 'Verify.', // 3.5-5.5s: Barcode formation
+  trust: {
+    headline: 'Trust the product.', // After scan completes
     subline: ''
   },
   cycling: {
@@ -90,19 +91,31 @@ export function HomepageHero() {
   }, [])
   const [currentProduct, setCurrentProduct] = useState(PRODUCTS[0])
   const [currentProductIndex, setCurrentProductIndex] = useState(0)
-  const [showCTA, setShowCTA] = useState(false) // Show CTA when T-shirt is displayed
   const [showText, setShowText] = useState(true) // Start with text visible
   const [showIntroText, setShowIntroText] = useState(true) // Control "Scan any product" text separately
-
-  // Hide "Scan any product" text after 1.2s, but keep animation running
+  const [textPhase, setTextPhase] = useState<'scan' | 'trust' | ''>('scan') // UI text phase
+  
+  // Manage text phases during intro
   useEffect(() => {
     if (phase === 'intro') {
-      const timer = setTimeout(() => {
+      // Show "Scan any product." initially
+      setTextPhase('scan')
+      const hideScanTimer = setTimeout(() => {
         setShowIntroText(false)
-      }, 1200) // Hide text after 1.2s
-      return () => clearTimeout(timer)
+      }, 1200) // Hide after 1.2s
+      
+      // Show "Trust the product." with enough time to read before phase change (intro ends at 3.5s)
+      const trustTimer = setTimeout(() => {
+        setTextPhase('trust')
+      }, 2000) // ~1.5s visible before preload
+      
+      return () => {
+        clearTimeout(hideScanTimer)
+        clearTimeout(trustTimer)
+      }
     } else {
-      setShowIntroText(false) // Keep hidden in other phases
+      setTextPhase('')
+      setShowIntroText(false)
     }
   }, [phase])
 
@@ -111,10 +124,6 @@ export function HomepageHero() {
     if (productIndex >= 0 && productIndex < PRODUCTS.length) {
       setCurrentProduct(PRODUCTS[productIndex])
       setCurrentProductIndex(productIndex)
-      // Show CTA when T-shirt (index 2) is displayed, and keep it visible
-      if (productIndex === 2) {
-        setShowCTA(true)
-      }
     }
   }
 
@@ -139,14 +148,12 @@ export function HomepageHero() {
 
   return (
     <section className="homepage-hero">
-      {/* Product Info Panels - Multiple panels with information */}
-      <ProductInfoTile
-        product={(phase === 'preload' || phase === 'cycling') ? currentProduct : null}
-        phase={phase}
+      {/* Flowing Background Animation */}
+      <FlowBackground
         productIndex={PRODUCTS.findIndex(p => p.name === currentProduct.name)}
-        isTransitioning={isTransitioning}
+        isVisible={phase === 'preload' || phase === 'cycling' || isTransitioning}
       />
-
+      
       {/* 3D Canvas */}
       <div className="hero-canvas">
         <Canvas
@@ -173,8 +180,11 @@ export function HomepageHero() {
       </div>
 
       {/* Text Overlay */}
-      <div className={`hero-text ${(phase === 'intro' && showIntroText) || phase === 'barcode' ? 'visible' : ''}`}>
-        <h1>{PHASES[phase as keyof typeof PHASES]?.headline || ''}</h1>
+      <div className={`hero-text ${textPhase !== '' ? 'visible' : ''}`}>
+        <h1>
+          {textPhase === 'scan' && PHASES.intro.headline}
+          {textPhase === 'trust' && PHASES.trust.headline}
+        </h1>
       </div>
 
       {/* Bottom tagline - Shows product info during cycling, otherwise main tagline */}
@@ -188,20 +198,20 @@ export function HomepageHero() {
           <p>Digital Product Passports</p>
         )}
       </div>
-
-      {/* CTA Panel - Right side, visible when T-shirt is shown */}
-      <div className={`hero-cta ${showCTA ? 'visible' : ''}`}>
-        <div className="cta-content">
-          <p className="cta-line-1">Every product has a story.</p>
-          <p className="cta-line-2">Now you can trace it.</p>
-          <p className="cta-line-3">Digital Product Passports</p>
-          <p className="cta-line-4">for the circular economy.</p>
-          <div className="cta-buttons">
-            <a href="/producer" className="cta-button">I&apos;m a producer.</a>
-            <a href="/consumer" className="cta-button cta-button-secondary">I&apos;m a consumer.</a>
+      {/* CTA - Center, visible during preload and cycling */}
+      {(phase === 'cycling' || phase === 'preload') && (
+        <div className="hero-cta">
+          <div className="cta-content">
+            <p className="cta-line-1">Every product has a story.</p>
+            <p className="cta-line-3">Digital Product Passports</p>
+            <p className="cta-line-4">for the circular economy.</p>
+            <div className="cta-buttons">
+              <a href="/producer" className="cta-button">I&apos;m a producer.</a>
+              <Link href="/consumer" className="cta-button cta-button-secondary">I&apos;m a consumer.</Link>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Scroll indicator */}
       <div className="scroll-indicator">

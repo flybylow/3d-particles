@@ -303,25 +303,21 @@ export function HeroAnimation({
     
     switch (phase) {
       case 'intro':
-        // Intro: Bars fly in one by one from scatter, scanline animates over barcode, then morphs to product
-        // Scanline completes at timeline.scanMoveTime (2.0s), then holds briefly, then fades out
-        // Product morph starts after scanline finishes
+        // Intro: Bars fly in from scatter, scanline animates over barcode, then morphs to product
+        // Keep bottle centered (no passport card on left - avoids particle clustering on left edge)
         const barFlyInDuration = 1.2 // Time for all bars to fly in
         const scanCompleteTime = timeline.scanMoveTime + 0.2 // Scan completes + brief hold
         const productMorphStart = scanCompleteTime + 0.1 // Start morphing after scanline completes
-
+        const productMorphDuration = 0.8 // Duration for barcode to bottle morph
+        
         if (elapsed < productMorphStart) {
           // Bars fly in one by one from scatter to barcode positions
-          // Each bar animates individually with staggered timing
           target = positionSets.barcode
-          // Progress will be handled per-bar in the interpolation loop
-          progress = 1 // Base progress - bars will animate individually
+          progress = 1
           particleColor = colors.offWhite
           chaosOpacity = 0.92
         } else {
-          // Bar-by-bar explosion from barcode to product (after scanline completes)
-          // Each bar explodes individually into product positions
-          // Set product index and trigger transition start when transformation begins
+          // Bar-by-bar explosion from barcode to bottle, then hold bottle centered
           if (elapsed - productMorphStart < 0.1) {
             console.log('[Animation] Intro → Bottle morph started')
             setCurrentProductIndex(0)
@@ -330,10 +326,10 @@ export function HeroAnimation({
           }
 
           target = (positionSets.products && positionSets.products[0]) ? positionSets.products[0] : positionSets.barcode
-          progress = 1 // Base progress - bars will explode individually
+          progress = 1
           particleColor = colors.offWhite
           chaosOpacity = 0.92
-          shouldRotate = false // No rotation during explosion
+          shouldRotate = elapsed > productMorphStart + productMorphDuration // Rotate after morph complete
         }
 
         if (elapsed > timeline.intro) {
@@ -472,9 +468,10 @@ export function HeroAnimation({
     
     // Interpolate positions with staggered timing
     // Apply uniform Y offset and scale for products (all objects centered at origin by default)
-    const baseProductYOffset = -0.3 // Vertical position adjustment (moved up)
-    // T-shirt needs additional offset since its geometry center is lower
-    const productYOffset = currentProductIndex === 2 ? baseProductYOffset + 0.4 : baseProductYOffset
+    const baseProductYOffset = -0.2 // Vertical position adjustment (moved up slightly)
+    // Product-specific offsets for consistent visual alignment
+    const productOffsets = [-0.2, -0.2, 0.1] // [wine bottle, battery, t-shirt]
+    const productYOffset = productOffsets[currentProductIndex] ?? baseProductYOffset
     const productScale = 0.85 // Scale for products (increased since camera is further away)
     
     // Safety check: ensure target is defined and has correct length
@@ -587,9 +584,9 @@ export function HeroAnimation({
       rotationAngle.current += delta * 0.5
       const cos = Math.cos(rotationAngle.current)
       const sin = Math.sin(rotationAngle.current)
-      const baseProductYOffset = -0.3
-      // T-shirt needs additional offset since its geometry center is lower
-      const productYOffset = currentProductIndex === 2 ? baseProductYOffset + 0.4 : baseProductYOffset
+      // Product-specific offsets for consistent visual alignment
+      const productOffsets = [-0.2, -0.2, 0.1] // [wine bottle, battery, t-shirt]
+      const productYOffset = productOffsets[currentProductIndex] ?? -0.2
       const productScale = 0.85
       
       for (let i = 0; i < positions.length; i += 3) {
