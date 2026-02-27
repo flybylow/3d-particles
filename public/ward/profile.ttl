@@ -1,4 +1,4 @@
-@prefix ward: <https://tabulas.eu/ward/vocab#>.
+@prefix ward: <https://tabulas.eu/ward/vocab.ttl#> .
 
 <https://tabulas.eu/ward/#me> a ward:Person;
     ward:name "Ward De Muynck";
