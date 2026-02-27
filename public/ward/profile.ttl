@@ -1,0 +1,25 @@
+@prefix ward: <https://tabulas.eu/ward/vocab#>.
+
+<https://tabulas.eu/ward/#me> a ward:Person;
+    ward:name "Ward De Muynck";
+    ward:location "Wortegem";
+    ward:studies "Knowledge Graphs";
+    ward:knows <https://pietercolpaert.be/#me>, <https://tabulas.eu/ward/#ben>;
+    ward:hasPosition _:pos1, _:pos2.
+
+_:pos1 a ward:Position;
+    ward:jobTitle "Founder";
+    ward:atOrganization <https://tabulas.eu/#org>.
+
+_:pos2 a ward:Position;
+    ward:jobTitle "Student";
+    ward:atOrganization <http://www.wikidata.org/entity/Q1137665>.
+
+<https://tabulas.eu/#org> a ward:Organization;
+    ward:name "Tabulas".
+
+<https://pietercolpaert.be/#me> a ward:Person;
+    ward:name "Pieter Colpaert".
+
+<https://tabulas.eu/ward/#ben> a ward:Person;
+    ward:name "Ben De Meester".

@@ -1,0 +1,21 @@
+{
+  "name": "ward-lab1",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "rdf-stores": "^2.1.0",
+    "@rdfjs/types": "^2.0.0",
+    "n3": "^1.22.0",
+    "jsonld": "^8.3.0",
+    "rdf-data-factory": "^1.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0",
+    "@types/n3": "^1.21.0",
+    "@types/jsonld": "^1.5.0"
+  }
+}

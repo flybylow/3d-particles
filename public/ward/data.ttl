@@ -1,0 +1,5 @@
+
+@prefix ward: <https://tabulas.eu/about/vocab#> .
+
+<https://tabulas.eu/about/#me> a ward:Person ;
+  ward:name "Ward De Muynck" . 

@@ -1,0 +1,62 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ward: <https://tabulas.eu/ward/vocab#> .
+
+# Classes
+
+ward:Person a rdfs:Class ;
+  rdfs:label "Person"@en ;
+  rdfs:comment "A human being."@en .
+
+ward:Organization a rdfs:Class ;
+  rdfs:label "Organization"@en ;
+  rdfs:comment "An organized group of persons."@en .
+
+ward:Position a rdfs:Class ;
+  rdfs:label "Position"@en ;
+  rdfs:comment "The role a person has in an organization."@en .
+
+# Properties
+
+ward:name a rdf:Property ;
+  rdfs:label "name"@en ;
+  rdfs:comment "The name of a resource."@en ;
+  rdfs:domain rdfs:Resource ;
+  rdfs:range xsd:string .
+
+ward:location a rdf:Property ;
+  rdfs:label "location"@en ;
+  rdfs:comment "The place where a person lives."@en ;
+  rdfs:domain ward:Person ;
+  rdfs:range xsd:string .
+
+ward:studies a rdf:Property ;
+  rdfs:label "studies"@en ;
+  rdfs:comment "A subject or program a person is currently studying."@en ;
+  rdfs:domain ward:Person ;
+  rdfs:range xsd:string .
+
+ward:knows a rdf:Property ;
+  rdfs:label "knows"@en ;
+  rdfs:comment "A person known by this person."@en ;
+  rdfs:domain ward:Person ;
+  rdfs:range ward:Person .
+
+ward:hasPosition a rdf:Property ;
+  rdfs:label "has position"@en ;
+  rdfs:comment "A position this person holds at an organization."@en ;
+  rdfs:domain ward:Person ;
+  rdfs:range ward:Position .
+
+ward:jobTitle a rdf:Property ;
+  rdfs:label "job title"@en ;
+  rdfs:comment "The title or role name of a position."@en ;
+  rdfs:domain ward:Position ;
+  rdfs:range xsd:string .
+
+ward:atOrganization a rdf:Property ;
+  rdfs:label "at organization"@en ;
+  rdfs:comment "The organization where this position is held."@en ;
+  rdfs:domain ward:Position ;
+  rdfs:range ward:Organization .
