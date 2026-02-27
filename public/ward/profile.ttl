@@ -2,7 +2,7 @@
 
 <https://tabulas.eu/ward/#me> a ward:Person;
     ward:name "Ward De Muynck";
-    ward:location "Wortegem";
+    ward:location "Brugge";
     ward:studies "Knowledge Graphs";
     ward:knows <https://pietercolpaert.be/#me>, <https://tabulas.eu/ward/#ben>;
     ward:hasPosition _:pos1, _:pos2.
