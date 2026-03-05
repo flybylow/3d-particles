@@ -5,9 +5,11 @@
 
 # Classes
 
-ward:Person a rdfs:Class ;
-  rdfs:label "Person"@en ;
-  rdfs:comment "A human being."@en .
+ward:name a rdf:Property ;
+  rdfs:label "name"@en ;
+  rdfs:comment "The name of a resource."@en ;
+  rdfs:domain rdfs:Resource ;
+  rdfs:range xsd:string .
 
 ward:Organization a rdfs:Class ;
   rdfs:label "Organization"@en ;
