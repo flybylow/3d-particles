@@ -1,25 +1,24 @@
 @prefix ward: <https://tabulas.eu/ward/vocab.ttl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix seppe: <https://seppesantens.github.io/rdf-lab2/data.ttl#> .
+@prefix thijs: <https://tdhulster.github.io/knowledge-graphs-ugent-2026/profile.ttl#> .
+@prefix olivier: <https://raw.githubusercontent.com/olivierdm/itsme/refs/heads/main/profile.ttl#> .
 
-<https://tabulas.eu/ward/#me> a ward:Person;
-    ward:name "Ward De Muynck";
-    ward:location "Brugge";
-    ward:studies "Knowledge Graphs";
-    ward:knows <https://pietercolpaert.be/#me>, <https://tabulas.eu/ward/#ben>;
-    ward:hasPosition _:pos1, _:pos2.
+<https://tabulas.eu/ward/#me> a ward:Person ;
+  ward:name "Ward De Muynck" ;
+  ward:location "Brugge" ;
+  ward:studies "Knowledge Graphs" ;
+  ward:knows seppe:me, thijs:me, olivier:me ;
+  ward:hasPosition _:pos1, _:pos2 .
 
-_:pos1 a ward:Position;
-    ward:jobTitle "Founder";
-    ward:atOrganization <https://tabulas.eu/#org>.
+_:pos1 a ward:Position ;
+  ward:jobTitle "Founder" ;
+  ward:atOrganization <https://tabulas.eu/#org> .
 
-_:pos2 a ward:Position;
-    ward:jobTitle "Student";
-    ward:atOrganization <http://www.wikidata.org/entity/Q1137665>.
+_:pos2 a ward:Position ;
+  ward:jobTitle "Student" ;
+  ward:atOrganization <http://www.wikidata.org/entity/Q1137665> .
 
-<https://tabulas.eu/#org> a ward:Organization;
-    ward:name "Tabulas".
-
-<https://pietercolpaert.be/#me> a ward:Person;
-    ward:name "Pieter Colpaert".
-
-<https://tabulas.eu/ward/#ben> a ward:Person;
-    ward:name "Ben De Meester".
+<https://tabulas.eu/#org> a ward:Organization ;
+  ward:name "Tabulas" .

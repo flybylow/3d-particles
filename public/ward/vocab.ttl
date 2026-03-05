@@ -17,12 +17,10 @@ ward:Position a rdfs:Class ;
   rdfs:label "Position"@en ;
   rdfs:comment "The role a person has in an organization."@en .
 
-# Properties
-
 ward:name a rdf:Property ;
   rdfs:label "name"@en ;
-  rdfs:comment "The name of a resource."@en ;
-  rdfs:domain rdfs:Resource ;
+  rdfs:comment "The name of a person or organization."@en ;
+  rdfs:domain ward:Person ;
   rdfs:range xsd:string .
 
 ward:location a rdf:Property ;
