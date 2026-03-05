@@ -5,11 +5,9 @@
 
 # Classes
 
-ward:name a rdf:Property ;
-  rdfs:label "name"@en ;
-  rdfs:comment "The name of a resource."@en ;
-  rdfs:domain rdfs:Resource ;
-  rdfs:range xsd:string .
+ward:Person a rdfs:Class ;
+  rdfs:label "Person"@en ;
+  rdfs:comment "A human being."@en .
 
 ward:Organization a rdfs:Class ;
   rdfs:label "Organization"@en ;
@@ -19,10 +17,12 @@ ward:Position a rdfs:Class ;
   rdfs:label "Position"@en ;
   rdfs:comment "The role a person has in an organization."@en .
 
+# Properties
+
 ward:name a rdf:Property ;
   rdfs:label "name"@en ;
-  rdfs:comment "The name of a person or organization."@en ;
-  rdfs:domain ward:Person ;
+  rdfs:comment "The name of a resource."@en ;
+  rdfs:domain rdfs:Resource ;
   rdfs:range xsd:string .
 
 ward:location a rdf:Property ;

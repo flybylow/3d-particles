@@ -22,3 +22,10 @@ _:pos2 a ward:Position ;
 
 <https://tabulas.eu/#org> a ward:Organization ;
   ward:name "Tabulas" .
+
+  <http://www.wikidata.org/entity/Q1137665> a ward:Organization ;
+  ward:name "Ghent University" .
+
+seppe:me a ward:Person .
+thijs:me a ward:Person .
+olivier:me a ward:Person .
