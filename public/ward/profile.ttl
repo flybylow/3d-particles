@@ -1,14 +1,16 @@
 @prefix ward: <https://tabulas.eu/ward/vocab.ttl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
 @prefix seppe: <https://seppesantens.github.io/rdf-lab2/data.ttl#> .
 @prefix thijs: <https://tdhulster.github.io/knowledge-graphs-ugent-2026/profile.ttl#> .
 @prefix olivier: <https://raw.githubusercontent.com/olivierdm/itsme/refs/heads/main/profile.ttl#> .
 
-<https://tabulas.eu/ward/#me> a ward:Person ;
+<https://tabulas.eu/ward/profile.ttl#me> a ward:Person ;
   ward:name "Ward De Muynck" ;
   ward:location "Brugge" ;
   ward:studies "Knowledge Graphs" ;
+  schema:course <https://www.ugain.ugent.be/MCKG2026.htm> ;
   ward:knows seppe:me, thijs:me, olivier:me ;
   ward:hasPosition _:pos1, _:pos2 .
 
