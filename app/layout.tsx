@@ -2,8 +2,12 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '3D Particles Hero Animation',
-  description: 'Immersive particle animation transforming from barcodes to products',
+  title: {
+    default: 'Tabulas',
+    template: '%s — Tabulas',
+  },
+  description:
+    'Digital Product Passport infrastructure for the EU circular economy.',
 }
 
 export default function RootLayout({
